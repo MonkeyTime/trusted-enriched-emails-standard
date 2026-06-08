@@ -10,6 +10,7 @@
   ],
   "scripts": {
     "dev": "npm run dev -w @realtimemail/web-client",
+    "docs:build": "node scripts/build-docs-site.mjs",
     "build": "npm run build -w @realtimemail/sdk && npm run build -w @realtimemail/web-client",
     "conformance": "npm run build -w @realtimemail/sdk && node scripts/validate-conformance.mjs",
     "python:conformance": "python scripts/validate-python-conformance.py",
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.0.0",
+    "marked": "^18.0.5",
     "typescript": "^5.8.0",
     "vite": "^7.0.0"
   }
