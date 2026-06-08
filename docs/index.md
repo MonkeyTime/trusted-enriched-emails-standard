@@ -10,6 +10,7 @@ Realtime Mail is an open draft standard for trusted interactive mail. It combine
 - [Threat model](threat-model.md)
 - [Roadmap](roadmap.md)
 - [Developer quickstart](guides/developer-quickstart.md)
+- [POC completion status](poc-completion.md)
 
 ## SDK References
 
@@ -20,6 +21,7 @@ Realtime Mail is an open draft standard for trusted interactive mail. It combine
 - [Java SDK](reference/java.md)
 - [C# SDK](reference/csharp.md)
 - [SDK compatibility matrix](sdk-compatibility.md)
+- [SDK release checklist](sdk-release-checklist.md)
 
 ## Profiles
 

@@ -18,7 +18,9 @@ Send a normal email fallback for clients that do not support Realtime Mail.
 
 ## 5. Use an SDK
 
-Use the TypeScript, Java, or C# SDK to resolve manifests, apply trust policy, subscribe to channels, and manage traditional mail accounts.
+Use an official SDK to validate manifests, validate messages, verify signatures, apply trust policy, authorize host actions, and authorize payment requests.
+
+Official SDKs currently cover TypeScript, Python, Go, Rust, Java, and C#.
 
 ## 6. Run the reference gateway
 
@@ -50,5 +52,15 @@ Use the gateway controls in the sidebar:
 
 - `Connect` loads the manifest and opens the SSE subscription.
 - `Signed event` asks the gateway to publish a signed message.
+- `Mini game` asks the gateway to publish a signed interactive sandbox message.
+- `Payment` asks the gateway to publish a signed host-mediated payment request.
 
 The reader should mark the received message as signature verified.
+
+## 8. Know the POC boundary
+
+The POC proves the trust model and SDK surface. It is not a production gateway or a production mail client yet.
+
+Before production, add durable authentication, persistent signing keys, durable audit logs, durable replay protection, rate limits, and broker hardening.
+
+See `docs/poc-completion.md` and `docs/sdk-release-checklist.md`.

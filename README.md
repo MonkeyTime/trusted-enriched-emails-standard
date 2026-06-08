@@ -107,14 +107,20 @@ If the domain is trusted, the client can subscribe to declared channels through 
 
 ## Security-first SDK surface
 
-SDKs now include the first security primitives:
+SDKs now include the POC security primitives:
 
 - manifest validators;
 - message validators;
+- action and payment request validators;
 - validation errors with paths;
-- signature verifier scaffolding;
+- signature canonicalization and verification;
 - trust policy;
-- sandbox rendering policy helpers.
+- state policy;
+- host action authorization;
+- payment request security authorization;
+- gateway profile helpers.
+
+For the current milestone, the SDKs are the primary reusable output. The web client and gateway are reference implementations that prove the flow.
 
 See also:
 
@@ -126,4 +132,6 @@ See also:
 - `docs/state-policy.md`
 - `docs/threat-model.md`
 - `docs/roadmap.md`
+- `docs/poc-completion.md`
+- `docs/sdk-release-checklist.md`
 - `docs/adr`

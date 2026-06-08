@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT"
 description = "Rust SDK for the Realtime Mail draft standard"
+repository = "https://github.com/MonkeyTime/realtime-mail-standard"
+homepage = "https://monkeytime.github.io/realtime-mail-standard/"
+documentation = "https://monkeytime.github.io/realtime-mail-standard/reference/rust.html"
 
 [dependencies]
 base64 = "0.22"

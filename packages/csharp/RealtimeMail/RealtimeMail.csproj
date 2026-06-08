@@ -5,5 +5,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <PackageId>RealtimeMail</PackageId>
     <Version>0.1.0</Version>
+    <Description>C# SDK for the Realtime Mail draft standard</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://monkeytime.github.io/realtime-mail-standard/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/MonkeyTime/realtime-mail-standard</RepositoryUrl>
   </PropertyGroup>
 </Project>

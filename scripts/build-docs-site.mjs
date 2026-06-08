@@ -79,11 +79,11 @@ function landingPage(pages) {
   const groups = [
     {
       title: "Start Here",
-      items: ["project-direction.md", "specification.md", "security-model.md", "threat-model.md", "roadmap.md", "guides/developer-quickstart.md"]
+      items: ["project-direction.md", "specification.md", "security-model.md", "threat-model.md", "roadmap.md", "guides/developer-quickstart.md", "poc-completion.md"]
     },
     {
       title: "SDK References",
-      items: ["reference/typescript.md", "reference/python.md", "reference/go.md", "reference/rust.md", "reference/java.md", "reference/csharp.md", "sdk-compatibility.md"]
+      items: ["reference/typescript.md", "reference/python.md", "reference/go.md", "reference/rust.md", "reference/java.md", "reference/csharp.md", "sdk-compatibility.md", "sdk-release-checklist.md"]
     },
     {
       title: "Profiles",

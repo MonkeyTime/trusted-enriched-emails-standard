@@ -5,6 +5,19 @@
   <groupId>org.realtimemail</groupId>
   <artifactId>realtime-mail-sdk</artifactId>
   <version>0.1.0</version>
+  <name>Realtime Mail Java SDK</name>
+  <description>Java SDK for the Realtime Mail draft standard</description>
+  <url>https://monkeytime.github.io/realtime-mail-standard/</url>
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/license/mit</url>
+    </license>
+  </licenses>
+  <scm>
+    <url>https://github.com/MonkeyTime/realtime-mail-standard</url>
+    <connection>scm:git:https://github.com/MonkeyTime/realtime-mail-standard.git</connection>
+  </scm>
   <properties>
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
