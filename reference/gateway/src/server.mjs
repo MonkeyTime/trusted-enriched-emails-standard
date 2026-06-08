@@ -21,6 +21,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "../../..");
 const verifier = new SignatureVerifier(webcrypto);
 const port = Number(process.env.PORT ?? 8787);
+const allowedOrigins = parseAllowedOrigins(process.env.ALLOWED_ORIGINS);
 const broker = await createBrokerFromEnv();
 const keyPair = await webcrypto.subtle.generateKey({ name: "Ed25519" }, true, ["sign", "verify"]);
 const publicKey = `ed25519:${Buffer.from(await webcrypto.subtle.exportKey("raw", keyPair.publicKey)).toString("base64url")}`;
@@ -33,10 +34,14 @@ const routeAuthorizer = new RouteAuthorizer(manifest);
 const messageBuilder = new RealtimeMessageBuilder(manifest);
 const messageSigner = new MessageSigner(verifier);
 const actionReceiver = new ActionReceiver(manifest.domain);
+const publishedMessageIds = new Set();
+const receivedActionIds = new Set();
+const auditLog = [];
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? "/", `http://${request.headers.host}`);
   if (!isAllowedBrowserOrigin(request)) {
+    audit("origin_rejected", { origin: request.headers.origin ?? "" });
     sendJson(request, response, { ok: false, error: "origin_not_allowed" }, 403);
     return;
   }
@@ -51,64 +56,92 @@ const server = createServer(async (request, response) => {
   }
 
   if (request.method === "GET" && url.pathname === "/health") {
-    sendJson(request, response, { ok: true, broker: broker.type, subscribers: broker.subscriberCount });
+    sendJson(request, response, { ok: true, broker: broker.type, subscribers: broker.subscriberCount, auditEvents: auditLog.length });
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/audit") {
+    sendJson(request, response, { events: auditLog.slice(0, 50) });
     return;
   }
 
   if (request.method === "GET" && url.pathname === "/events") {
-    const route = url.searchParams.get("route") ?? "/rt/invoices/demo-user";
-    const authorized = routeAuthorizer.authorize({ route, channelId: "invoice-events", userId: "demo-user" });
-    if (!authorized.ok) {
-      sendJson(request, response, { ok: false, error: authorized.reason }, 403);
+    const context = authorizeRoute(request, url);
+    if (!context.ok) {
+      sendJson(request, response, { ok: false, error: context.reason }, 403);
       return;
     }
-    await subscribeSse(request, route, response);
+    await subscribeSse(request, context.route, context.userId, response);
     return;
   }
 
   if (request.method === "POST" && url.pathname === "/publish-demo") {
-    const route = url.searchParams.get("route") ?? "/rt/invoices/demo-user";
-    const authorized = routeAuthorizer.authorize({ route, channelId: "invoice-events", userId: "demo-user" });
-    if (!authorized.ok) {
-      sendJson(request, response, { ok: false, error: authorized.reason }, 403);
+    const context = authorizeRoute(request, url);
+    if (!context.ok) {
+      sendJson(request, response, { ok: false, error: context.reason }, 403);
       return;
     }
-    const message = await createSignedMessage(route);
-    await broker.publish(route, message);
-    sendJson(request, response, { ok: true, route, message });
+    const message = await createSignedMessage(context.route, url.searchParams.get("messageId") ?? undefined);
+    if (!rememberMessage(message)) {
+      sendJson(request, response, { ok: false, error: "duplicate_message" }, 409);
+      return;
+    }
+    await broker.publish(context.route, message);
+    audit("message_published", { route: context.route, userId: context.userId, messageId: message.id, subject: message.subject });
+    sendJson(request, response, { ok: true, route: context.route, message });
     return;
   }
 
   if (request.method === "POST" && url.pathname === "/publish-game-demo") {
-    const route = url.searchParams.get("route") ?? "/rt/invoices/demo-user";
-    const authorized = routeAuthorizer.authorize({ route, channelId: "invoice-events", userId: "demo-user" });
-    if (!authorized.ok) {
-      sendJson(request, response, { ok: false, error: authorized.reason }, 403);
+    const context = authorizeRoute(request, url);
+    if (!context.ok) {
+      sendJson(request, response, { ok: false, error: context.reason }, 403);
       return;
     }
-    const message = await createMiniGameMessage(route);
-    await broker.publish(route, message);
-    sendJson(request, response, { ok: true, route, message });
+    const message = await createMiniGameMessage(context.route);
+    if (!rememberMessage(message)) {
+      sendJson(request, response, { ok: false, error: "duplicate_message" }, 409);
+      return;
+    }
+    await broker.publish(context.route, message);
+    audit("message_published", { route: context.route, userId: context.userId, messageId: message.id, subject: message.subject });
+    sendJson(request, response, { ok: true, route: context.route, message });
     return;
   }
 
   if (request.method === "POST" && url.pathname === "/publish-payment-demo") {
-    const route = url.searchParams.get("route") ?? "/rt/invoices/demo-user";
-    const authorized = routeAuthorizer.authorize({ route, channelId: "invoice-events", userId: "demo-user" });
-    if (!authorized.ok) {
-      sendJson(request, response, { ok: false, error: authorized.reason }, 403);
+    const context = authorizeRoute(request, url);
+    if (!context.ok) {
+      sendJson(request, response, { ok: false, error: context.reason }, 403);
       return;
     }
-    const message = await createPaymentMessage(route);
-    await broker.publish(route, message);
-    sendJson(request, response, { ok: true, route, message });
+    const message = await createPaymentMessage(context.route);
+    if (!rememberMessage(message)) {
+      sendJson(request, response, { ok: false, error: "duplicate_message" }, 409);
+      return;
+    }
+    await broker.publish(context.route, message);
+    audit("message_published", { route: context.route, userId: context.userId, messageId: message.id, subject: message.subject });
+    sendJson(request, response, { ok: true, route: context.route, message });
     return;
   }
 
   if (request.method === "POST" && url.pathname === "/actions") {
     const action = await readJson(request);
-    const result = actionReceiver.receive(action.action ?? action);
-    sendJson(request, response, result, result.ok ? 202 : 400);
+    const value = action.action ?? action;
+    const result = actionReceiver.receive(value);
+    if (!result.ok) {
+      audit("action_rejected", { reason: result.reason, actionId: value?.id ?? "" });
+      sendJson(request, response, result, 400);
+      return;
+    }
+    if (!rememberAction(result.action)) {
+      audit("action_rejected", { reason: "duplicate_action", actionId: result.action.id });
+      sendJson(request, response, { ok: false, reason: "duplicate_action" }, 409);
+      return;
+    }
+    audit("action_accepted", { actionId: result.action.id, messageId: result.action.messageId, domain: result.action.domain });
+    sendJson(request, response, result, 202);
     return;
   }
 
@@ -121,7 +154,7 @@ server.listen(port, "127.0.0.1", () => {
   console.log(`Manifest public key: ${publicKey}`);
 });
 
-async function subscribeSse(request, route, response) {
+async function subscribeSse(request, route, userId, response) {
   response.writeHead(200, {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",
@@ -131,14 +164,16 @@ async function subscribeSse(request, route, response) {
   const subscription = await broker.subscribe(route, (message) => {
     response.write(`event: message\ndata: ${JSON.stringify(message)}\n\n`);
   });
+  audit("subscribed", { route, userId });
   response.write(`event: ready\ndata: ${JSON.stringify({ route })}\n\n`);
   response.on("close", () => {
     void subscription.unsubscribe();
   });
 }
 
-async function createSignedMessage(route) {
+async function createSignedMessage(route, id) {
   const message = messageBuilder.build({
+    id,
     from: "billing@acme.tld",
     channelId: "invoice-events",
     subject: "Reference gateway signed event",
@@ -290,6 +325,62 @@ function serializeSignedMessage(signed, route) {
   };
 }
 
+function authorizeRoute(request, url) {
+  const route = url.searchParams.get("route") ?? "/rt/invoices/demo-user";
+  const userId = userIdFromRequest(request, url);
+  const channelId = url.searchParams.get("channelId") ?? "invoice-events";
+  const authorized = routeAuthorizer.authorize({ route, channelId, userId });
+  if (!authorized.ok) {
+    audit("route_rejected", { route, userId, channelId, reason: authorized.reason });
+    return { ok: false, reason: authorized.reason, route, userId, channelId };
+  }
+  return { ok: true, route, userId, channelId };
+}
+
+function userIdFromRequest(request, url) {
+  const header = request.headers["x-realtime-user"];
+  if (typeof header === "string" && header.length > 0) {
+    return header;
+  }
+  return url.searchParams.get("userId") ?? "demo-user";
+}
+
+function rememberMessage(message) {
+  if (publishedMessageIds.has(message.id)) {
+    audit("message_replay_rejected", { messageId: message.id });
+    return false;
+  }
+  publishedMessageIds.add(message.id);
+  trimSet(publishedMessageIds);
+  return true;
+}
+
+function rememberAction(action) {
+  if (receivedActionIds.has(action.id)) {
+    return false;
+  }
+  receivedActionIds.add(action.id);
+  trimSet(receivedActionIds);
+  return true;
+}
+
+function trimSet(set) {
+  if (set.size <= 500) {
+    return;
+  }
+  const first = set.values().next().value;
+  set.delete(first);
+}
+
+function audit(type, fields = {}) {
+  auditLog.unshift({
+    at: new Date().toISOString(),
+    type,
+    ...fields
+  });
+  auditLog.length = Math.min(auditLog.length, 200);
+}
+
 async function readJson(request) {
   const chunks = [];
   for await (const chunk of request) {
@@ -311,12 +402,22 @@ function isAllowedBrowserOrigin(request) {
   if (!origin) {
     return true;
   }
+  if (allowedOrigins.size > 0) {
+    return allowedOrigins.has(origin);
+  }
   try {
     const url = new URL(origin);
     return url.protocol === "http:" && ["127.0.0.1", "localhost"].includes(url.hostname);
   } catch {
     return false;
   }
+}
+
+function parseAllowedOrigins(value) {
+  return new Set((value ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean));
 }
 
 function corsHeaders(request) {

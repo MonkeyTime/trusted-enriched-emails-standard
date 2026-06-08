@@ -69,14 +69,20 @@ The Gateway SDK profile is available in the official SDKs:
 
 The RabbitMQ integration test covers the real path from gateway publish, to RabbitMQ exchange routing, to SSE delivery of a signed message.
 
+The reference gateway also includes:
+
+- explicit user id binding for route authorization;
+- configurable browser origin allowlists through `ALLOWED_ORIGINS`;
+- process-local replay guards for published message ids and received action ids;
+- structured audit events for subscriptions, publishes, action decisions, route rejections, origin rejections, and replay rejections.
+
 ## Production Requirements
 
 Before a domain gateway is production-ready, it must add:
 
 - user authentication;
-- per-user route authorization;
 - persistent signing keys and key rotation;
-- replay protection based on `message.id` and `expiresAt`;
-- audit logging for published messages and accepted actions;
+- durable replay protection based on `message.id`, action ids, and `expiresAt`;
+- persistent audit logging for published messages and accepted actions;
 - unsubscribe/revocation handling;
 - broker-specific retry, dead-letter, and poison-message policy.

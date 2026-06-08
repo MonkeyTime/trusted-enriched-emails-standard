@@ -23,6 +23,7 @@ const server = spawn(process.execPath, ["reference/gateway/src/server.mjs"], {
   env: {
     ...process.env,
     AMQP_URL: amqpUrl,
+    ALLOWED_ORIGINS: "http://127.0.0.1:5190,http://localhost:5190",
     PORT: String(port)
   },
   stdio: ["ignore", "pipe", "pipe"]
@@ -49,6 +50,40 @@ try {
   });
   assert(allowedOrigin.ok, `local app origin was rejected: ${allowedOrigin.status}`);
   assert(allowedOrigin.headers.get("access-control-allow-origin") === "http://127.0.0.1:5190", "local origin was not echoed in CORS header");
+
+  const wrongUserEvents = await fetch(`${gatewayUrl}/events?route=${encodeURIComponent(route)}&userId=other-user`);
+  assert(wrongUserEvents.status === 403, `wrong user route was not rejected: ${wrongUserEvents.status}`);
+
+  const replayId = `replay-${Date.now()}`;
+  const firstReplayPublish = await fetch(`${gatewayUrl}/publish-demo?route=${encodeURIComponent(route)}&messageId=${replayId}`, {
+    method: "POST"
+  });
+  assert(firstReplayPublish.ok, `first fixed-id publish failed: ${firstReplayPublish.status}`);
+  const duplicateReplayPublish = await fetch(`${gatewayUrl}/publish-demo?route=${encodeURIComponent(route)}&messageId=${replayId}`, {
+    method: "POST"
+  });
+  assert(duplicateReplayPublish.status === 409, `duplicate message publish was not rejected: ${duplicateReplayPublish.status}`);
+
+  const action = {
+    id: `ack-${Date.now()}`,
+    messageId: replayId,
+    domain: "billing.acme.tld",
+    type: "open_url",
+    requiresUserGesture: true,
+    url: "https://billing.acme.tld/invoices/1"
+  };
+  const acceptedAction = await fetch(`${gatewayUrl}/actions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(action)
+  });
+  assert(acceptedAction.status === 202, `valid action was not accepted: ${acceptedAction.status}`);
+  const duplicateAction = await fetch(`${gatewayUrl}/actions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(action)
+  });
+  assert(duplicateAction.status === 409, `duplicate action was not rejected: ${duplicateAction.status}`);
 
   const abort = new AbortController();
   const events = await fetch(`${gatewayUrl}/events?route=${encodeURIComponent(route)}`, {
@@ -80,6 +115,10 @@ try {
 
   const health = await (await fetch(`${gatewayUrl}/health`)).json();
   assert(health.broker === "rabbitmq", "gateway did not use RabbitMQ broker");
+  assert(health.auditEvents > 0, "gateway health did not expose audit event count");
+  const audit = await (await fetch(`${gatewayUrl}/audit`)).json();
+  assert(audit.events.some((event) => event.type === "message_replay_rejected"), "audit log missing message replay rejection");
+  assert(audit.events.some((event) => event.type === "action_accepted"), "audit log missing accepted action");
   console.log("PASS RabbitMQ reference gateway integration");
 } finally {
   if (server.exitCode === null) {

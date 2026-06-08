@@ -38,6 +38,10 @@ This roadmap tracks the standard, SDKs, reference gateway, and web client togeth
 - SSE gateway transport in the TypeScript SDK.
 - Reference gateway with in-memory and RabbitMQ broker adapters.
 - RabbitMQ integration test using the real broker path.
+- Reference gateway user-bound route authorization.
+- Reference gateway configurable origin allowlist.
+- Reference gateway process-local replay guards for message ids and action ids.
+- Reference gateway structured audit events.
 
 ### Web Client UX
 
@@ -84,13 +88,6 @@ This roadmap tracks the standard, SDKs, reference gateway, and web client togeth
 ### Reference Client
 
 - Add Playwright coverage for real iframe click-to-action flows and synthetic `postMessage` rejection.
-
-### Gateway Reference
-
-- Make route authorization explicitly user-bound in the gateway API surface.
-- Add configurable allowed origins instead of local-only defaults.
-- Add replay protection for signed gateway messages and action receipts.
-- Add structured audit events for publish, subscribe, action, payment, and rejection paths.
 
 ## Next
 
