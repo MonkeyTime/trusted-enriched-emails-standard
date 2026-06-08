@@ -1,0 +1,13 @@
+{
+  "name": "@realtimemail/reference-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.mjs"
+  },
+  "dependencies": {
+    "amqplib": "^2.0.1",
+    "qrcode": "^1.5.4"
+  }
+}

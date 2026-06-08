@@ -1,0 +1,8 @@
+{
+  "id": "open-invoice",
+  "messageId": "msg_2026_0608_001",
+  "domain": "billing.acme.tld",
+  "type": "open_url",
+  "requiresUserGesture": false,
+  "url": "https://billing.acme.tld/invoices/2026-0608"
+}

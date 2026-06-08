@@ -1,0 +1,23 @@
+{
+  "id": "pay-invoice",
+  "messageId": "invoice-payment-001",
+  "domain": "billing.acme.tld",
+  "type": "publish_gateway_event",
+  "requiresUserGesture": true,
+  "payload": {
+    "kind": "host-mediated-payment-request",
+    "invoiceId": "2026-0608",
+    "amount": {
+      "value": "184.90",
+      "currency": "EUR"
+    },
+    "description": "Invoice #2026-0608",
+    "confirmationUx": "qr_code",
+    "fallbackProvider": {
+      "type": "qr_code",
+      "label": "Scan to pay",
+      "qrPayload": "https://billing.acme.tld/pay/invoices/2026-0608?amount=184.90&currency=EUR"
+    },
+    "expiresAt": "2026-06-08T08:15:00.000Z"
+  }
+}

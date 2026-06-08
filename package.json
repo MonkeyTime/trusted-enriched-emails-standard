@@ -1,0 +1,35 @@
+{
+  "name": "realtime-mail-standard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/web-client",
+    "packages/typescript",
+    "reference/gateway"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @realtimemail/web-client",
+    "build": "npm run build -w @realtimemail/sdk && npm run build -w @realtimemail/web-client",
+    "conformance": "npm run build -w @realtimemail/sdk && node scripts/validate-conformance.mjs",
+    "python:conformance": "python scripts/validate-python-conformance.py",
+    "python:check": "python -m compileall packages/python/src/realtime_mail && python scripts/validate-python-conformance.py && python scripts/test-python-gateway-profile.py",
+    "go:check": "node scripts/check-go.mjs",
+    "rust:check": "node scripts/check-rust.mjs",
+    "java:check": "node scripts/check-java.mjs",
+    "csharp:conformance": "dotnet run --project packages/csharp/RealtimeMail.Conformance/RealtimeMail.Conformance.csproj --nologo",
+    "crypto:test": "npm run build -w @realtimemail/sdk && node scripts/test-crypto-vector.mjs",
+    "security:test": "npm run build -w @realtimemail/sdk && node scripts/test-host-gateway-sdk.mjs",
+    "payment:attack-test": "npm run build -w @realtimemail/sdk && node scripts/test-payment-attack-cases.mjs",
+    "web-client:state-test": "npm run build -w @realtimemail/sdk && node scripts/test-web-client-state.mjs",
+    "rabbitmq:test": "npm run build -w @realtimemail/sdk && node scripts/test-reference-gateway-rabbitmq.mjs",
+    "gateway:start": "npm run build -w @realtimemail/sdk && npm run start -w @realtimemail/reference-gateway",
+    "test": "npm run build && npm run conformance && npm run crypto:test && npm run security:test && npm run payment:attack-test && npm run web-client:state-test && npm run rabbitmq:test && npm run python:check && npm run go:check && npm run rust:check && npm run java:check && npm run csharp:conformance",
+    "preview": "npm run preview -w @realtimemail/web-client"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "^5.8.0",
+    "vite": "^7.0.0"
+  }
+}

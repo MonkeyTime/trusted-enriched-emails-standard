@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "realtime-mail"
+version = "0.1.0"
+description = "Python SDK for the Realtime Mail draft standard"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [
+  { name = "Realtime Mail contributors" }
+]
+dependencies = []
+
+[project.optional-dependencies]
+crypto = ["cryptography>=43"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/realtime_mail"]

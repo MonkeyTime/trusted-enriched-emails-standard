@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://realtimemail.org/schemas/message.schema.json",
+  "title": "Realtime Mail Message",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "source", "domain", "from", "subject", "html", "capabilities", "receivedAt"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "source": {
+      "enum": ["traditional", "realtime"]
+    },
+    "domain": {
+      "type": "string",
+      "pattern": "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$"
+    },
+    "channelId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "from": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 320
+    },
+    "subject": {
+      "type": "string",
+      "maxLength": 998
+    },
+    "html": {
+      "type": "string",
+      "minLength": 1
+    },
+    "css": {
+      "type": "string"
+    },
+    "script": {
+      "type": "string"
+    },
+    "capabilities": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "manifest.schema.json#/$defs/capability"
+      }
+    },
+    "receivedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expiresAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^(rmail1\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+|ed25519:[A-Za-z0-9_-]+={0,2})$"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "const": "realtime"
+          }
+        }
+      },
+      "then": {
+        "required": ["channelId", "signature"]
+      }
+    },
+    {
+      "if": {
+        "required": ["script"]
+      },
+      "then": {
+        "properties": {
+          "capabilities": {
+            "contains": {
+              "const": "run:script-sandboxed"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+# Realtime Mail Standard
+
+Realtime Mail is an open draft standard for trusted interactive mail. It combines traditional mail compatibility with signed realtime channels, sandboxed rendering, explicit capabilities, and host-mediated actions.
+
+## Start Here
+
+- [Project direction](project-direction.md)
+- [Specification](specification.md)
+- [Security model](security-model.md)
+- [Threat model](threat-model.md)
+- [Roadmap](roadmap.md)
+- [Developer quickstart](guides/developer-quickstart.md)
+
+## SDK References
+
+- [TypeScript SDK](reference/typescript.md)
+- [Python SDK](reference/python.md)
+- [Go SDK](reference/go.md)
+- [Rust SDK](reference/rust.md)
+- [Java SDK](reference/java.md)
+- [C# SDK](reference/csharp.md)
+- [SDK compatibility matrix](sdk-compatibility.md)
+
+## Profiles
+
+- [Gateway SDK profile](gateway-sdk-profile.md)
+- [Host-mediated payment request profile](payment-request-profile.md)
+- [State policy](state-policy.md)
+
+## Schemas
+
+Normative schemas live in the repository under `spec/schemas`. They define manifests, messages, host-mediated actions, and payment request payloads.

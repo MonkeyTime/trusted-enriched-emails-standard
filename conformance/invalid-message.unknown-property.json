@@ -1,0 +1,13 @@
+{
+  "id": "msg_2026_0608_002",
+  "source": "realtime",
+  "domain": "billing.acme.tld",
+  "channelId": "invoice-events",
+  "from": "billing@acme.tld",
+  "subject": "Unknown field",
+  "html": "<article><h1>Invoice</h1></article>",
+  "capabilities": ["render:html"],
+  "receivedAt": "2026-06-08T08:00:00.000Z",
+  "signature": "rmail1.eyJhbGciOiJFZDI1NTE5IiwidHlwIjoicm1haWwxIn0.invalidsignature",
+  "hostCommand": "open_file"
+}

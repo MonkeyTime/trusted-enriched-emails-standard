@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://realtimemail.org/schemas/action.schema.json",
+  "title": "Realtime Mail Host-Mediated Action",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "messageId", "domain", "type", "requiresUserGesture"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "messageId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "domain": {
+      "type": "string"
+    },
+    "type": {
+      "enum": ["open_url", "publish_gateway_event", "request_notification", "store_isolated_value"]
+    },
+    "requiresUserGesture": {
+      "type": "boolean",
+      "const": true
+    },
+    "url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "payload": {}
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "protocol": "realtime-mail",
+  "version": "0.1-draft",
+  "domain": "billing.acme.tld",
+  "displayName": "ACME Billing",
+  "channels": []
+}

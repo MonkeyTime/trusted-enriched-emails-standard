@@ -1,0 +1,15 @@
+{
+  "id": "msg_bad_script_001",
+  "source": "realtime",
+  "domain": "billing.acme.tld",
+  "channelId": "invoice-events",
+  "from": "billing@acme.tld",
+  "subject": "Bad script",
+  "html": "<button>Click</button>",
+  "script": "alert('nope')",
+  "capabilities": [
+    "render:html"
+  ],
+  "receivedAt": "2026-06-08T08:00:00Z",
+  "signature": "rmail1.c2lnbmVkLXBheWxvYWQ.ZXhhbXBsZS1zaWduYXR1cmU"
+}

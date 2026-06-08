@@ -1,0 +1,19 @@
+{
+  "id": "msg_2026_0608_001",
+  "source": "realtime",
+  "domain": "billing.acme.tld",
+  "channelId": "invoice-events",
+  "from": "billing@acme.tld",
+  "subject": "Invoice #2026-0608 ready",
+  "html": "<article><h1>Invoice ready</h1></article>",
+  "css": "body { font-family: sans-serif; }",
+  "script": "parent.postMessage({ type: 'trusted-mail-action', action: 'ack' }, '*');",
+  "capabilities": [
+    "render:html",
+    "render:css",
+    "run:script-sandboxed"
+  ],
+  "receivedAt": "2026-06-08T08:00:00Z",
+  "expiresAt": "2026-06-22T08:00:00Z",
+  "signature": "rmail1.c2lnbmVkLXBheWxvYWQ.ZXhhbXBsZS1zaWduYXR1cmU"
+}

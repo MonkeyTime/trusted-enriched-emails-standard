@@ -1,0 +1,25 @@
+{
+  "protocol": "realtime-mail",
+  "version": "0.1-draft",
+  "domain": "billing.acme.tld",
+  "displayName": "ACME Billing",
+  "publicKeys": [
+    "ed25519:W11Aq3u9PGk8t2aRb7z3vP6uqQKABpKc7p7BxN7F3dE"
+  ],
+  "channels": [
+    {
+      "id": "invoice-events",
+      "label": "Invoices",
+      "route": "/rt/invoices/:userId",
+      "description": "Invoices, receipts, and signed payment actions.",
+      "capabilities": [
+        "render:html",
+        "render:css",
+        "render:svg",
+        "run:script-sandboxed",
+        "open-url:user-gesture",
+        "payment-request:user-gesture"
+      ]
+    }
+  ]
+}
