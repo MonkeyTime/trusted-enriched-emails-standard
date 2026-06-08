@@ -14,6 +14,7 @@ The repository is structured as a standard plus SDKs:
 - [Go SDK](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/packages/go)
 - [Rust SDK](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/packages/rust)
 - [Official documentation](https://monkeytime.github.io/realtime-mail-standard/)
+- [Trusted enriched email demo](https://monkeytime.github.io/realtime-mail-standard/demo.html)
 - [Normative JSON Schemas](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/spec/schemas)
 - [Conformance fixtures](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/conformance)
 - [Thunderbird integration notes](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/integrations/thunderbird)
@@ -127,6 +128,7 @@ For the current milestone, the SDKs are the primary reusable output. The web cli
 ## Documentation
 
 - [Documentation home](https://monkeytime.github.io/realtime-mail-standard/)
+- [Trusted enriched email demo](https://monkeytime.github.io/realtime-mail-standard/demo.html)
 - [Developer quickstart](https://monkeytime.github.io/realtime-mail-standard/guides/developer-quickstart.html)
 - [Specification](https://monkeytime.github.io/realtime-mail-standard/specification.html)
 - [Security model](https://monkeytime.github.io/realtime-mail-standard/security-model.html)

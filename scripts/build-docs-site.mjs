@@ -1,4 +1,4 @@
-import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { marked } from "marked";
 
@@ -26,6 +26,7 @@ for (const file of markdownFiles) {
 await writeFile(path.join(outDir, "index.html"), landingPage(pages), "utf8");
 await writeFile(path.join(outDir, "404.html"), redirect404(), "utf8");
 await writeFile(path.join(outDir, ".nojekyll"), "", "utf8");
+await cp(path.join(docsDir, "assets"), path.join(outDir, "assets"), { recursive: true });
 
 console.log(`Built ${pages.length} documentation pages in ${path.relative(process.cwd(), outDir)}`);
 
@@ -79,7 +80,7 @@ function landingPage(pages) {
   const groups = [
     {
       title: "Start Here",
-      items: ["project-direction.md", "specification.md", "security-model.md", "threat-model.md", "roadmap.md", "guides/developer-quickstart.md", "poc-completion.md"]
+      items: ["demo.md", "project-direction.md", "specification.md", "security-model.md", "threat-model.md", "roadmap.md", "guides/developer-quickstart.md", "poc-completion.md"]
     },
     {
       title: "SDK References",
@@ -109,14 +110,14 @@ function landingPage(pages) {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Realtime Mail Standard</title>
-    <link rel="stylesheet" href="/realtime-mail-standard/assets/site.css" />
+    <link rel="stylesheet" href="assets/site.css" />
   </head>
   <body>
     <main class="home">
       <header class="hero">
         <p class="eyebrow">Open draft standard</p>
         <h1>Realtime Mail Standard</h1>
-        <p>Trusted realtime interactive mail with signed messages, sandboxed rendering, explicit capabilities, host-mediated actions, and gateway-backed delivery.</p>
+        <p>Trusted enriched email with signed messages, sandboxed rendering, explicit capabilities, host-mediated actions, and optional realtime delivery.</p>
       </header>
       <div class="grid">
 ${sections}

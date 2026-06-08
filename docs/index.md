@@ -7,6 +7,7 @@ The value proposition is richer mail, not only faster mail: safe interactive inv
 ## Start Here
 
 - [Project direction](project-direction.md)
+- [Trusted enriched email demo](demo.md)
 - [Specification](specification.md)
 - [Security model](security-model.md)
 - [Threat model](threat-model.md)
