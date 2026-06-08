@@ -34,6 +34,10 @@ Module: `github.com/realtimemail/realtime-mail-go`
 - `Validate(action RealtimeMailAction) []ValidationIssue`
 - `Parse(action RealtimeMailAction) (RealtimeMailAction, error)`
 
+### `PaymentRequestPayloadValidator`
+
+- `Validate(payload map[string]any) []ValidationIssue`
+
 ## Security
 
 ### `TrustPolicy`
@@ -57,6 +61,12 @@ Module: `github.com/realtimemail/realtime-mail-go`
 - `VerifyEd25519(message RealtimeMailMessage, publicKey string) bool`
 
 The Go SDK uses only the standard library, including `crypto/ed25519`.
+
+### `PaymentRequestSecurityPolicy`
+
+- `Authorize(context PaymentRequestSecurityContext) PaymentRequestSecurityDecision`
+
+Checks the host-mediated payment payload against the source message, manifest domain, iframe source, payment capability, expected invoice, amount, currency, expiry, and processed invoice ids.
 
 ## Gateway Profile
 

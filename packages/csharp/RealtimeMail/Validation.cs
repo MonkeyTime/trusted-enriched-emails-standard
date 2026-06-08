@@ -113,6 +113,19 @@ public sealed class ActionValidator
         {
             issues.Add(new ValidationIssue("$.url", "must be an https URL for the action domain"));
         }
+        if (PaymentRequestHelpers.TryGetPayload(action.Payload, out var payload))
+        {
+            issues.AddRange(new PaymentRequestPayloadValidator().Validate(payload).Select(issue => new ValidationIssue("$.payload" + issue.Path[1..], issue.Message)));
+            if (action.Type != RealtimeMailActionType.PublishGatewayEvent)
+            {
+                issues.Add(new ValidationIssue("$.type", "must be publish_gateway_event for payment requests"));
+            }
+            if (PaymentRequestHelpers.TryGetObject(payload, "merchant", out var merchant)
+                && PaymentRequestHelpers.GetString(merchant, "domain") != action.Domain)
+            {
+                issues.Add(new ValidationIssue("$.payload.merchant.domain", "must match action domain"));
+            }
+        }
         return issues;
     }
 
@@ -136,5 +149,98 @@ public sealed class ActionValidator
         return Uri.TryCreate(value, UriKind.Absolute, out var uri)
             && uri.Scheme == Uri.UriSchemeHttps
             && string.Equals(uri.Host, domain, StringComparison.OrdinalIgnoreCase);
+    }
+}
+
+public sealed class PaymentRequestPayloadValidator
+{
+    public IReadOnlyList<ValidationIssue> Validate(IReadOnlyDictionary<string, object?> payload)
+    {
+        var issues = new List<ValidationIssue>();
+        if (PaymentRequestHelpers.GetString(payload, "kind") != "host-mediated-payment-request") issues.Add(new ValidationIssue("$.kind", "must equal host-mediated-payment-request"));
+        if (string.IsNullOrWhiteSpace(PaymentRequestHelpers.GetString(payload, "invoiceId"))) issues.Add(new ValidationIssue("$.invoiceId", "must be a string"));
+        if (!PaymentRequestHelpers.TryGetObject(payload, "merchant", out var merchant))
+        {
+            issues.Add(new ValidationIssue("$.merchant", "must be an object"));
+        }
+        else
+        {
+            if (!IsDomain(PaymentRequestHelpers.GetString(merchant, "domain") ?? "")) issues.Add(new ValidationIssue("$.merchant.domain", "must be a valid domain"));
+            if (string.IsNullOrWhiteSpace(PaymentRequestHelpers.GetString(merchant, "displayName"))) issues.Add(new ValidationIssue("$.merchant.displayName", "must be a string"));
+        }
+        if (!PaymentRequestHelpers.TryGetObject(payload, "amount", out var amount))
+        {
+            issues.Add(new ValidationIssue("$.amount", "must be an object"));
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(PaymentRequestHelpers.GetString(amount, "value"))) issues.Add(new ValidationIssue("$.amount.value", "must be a string"));
+            if (string.IsNullOrWhiteSpace(PaymentRequestHelpers.GetString(amount, "currency"))) issues.Add(new ValidationIssue("$.amount.currency", "must be a string"));
+        }
+        if (string.IsNullOrWhiteSpace(PaymentRequestHelpers.GetString(payload, "description"))) issues.Add(new ValidationIssue("$.description", "must be a string"));
+        if (!new[] { "browser_payment_request", "host_confirmation", "provider_checkout", "qr_code" }.Contains(PaymentRequestHelpers.GetString(payload, "confirmationUx")))
+        {
+            issues.Add(new ValidationIssue("$.confirmationUx", "must be a supported confirmation UX"));
+        }
+        if (PaymentRequestHelpers.TryGetObject(payload, "fallbackProvider", out var fallback))
+        {
+            if (!new[] { "provider_checkout", "qr_code" }.Contains(PaymentRequestHelpers.GetString(fallback, "type")))
+            {
+                issues.Add(new ValidationIssue("$.fallbackProvider.type", "must be a supported fallback provider type"));
+            }
+            if (string.IsNullOrWhiteSpace(PaymentRequestHelpers.GetString(fallback, "label"))) issues.Add(new ValidationIssue("$.fallbackProvider.label", "must be a string"));
+            var merchantDomain = merchant is null ? null : PaymentRequestHelpers.GetString(merchant, "domain");
+            if (!string.IsNullOrWhiteSpace(merchantDomain))
+            {
+                ValidateFallbackDomain(PaymentRequestHelpers.GetString(fallback, "url"), merchantDomain, "$.fallbackProvider.url", issues);
+                ValidateFallbackDomain(PaymentRequestHelpers.GetString(fallback, "qrPayload"), merchantDomain, "$.fallbackProvider.qrPayload", issues);
+            }
+        }
+        if (string.IsNullOrWhiteSpace(PaymentRequestHelpers.GetString(payload, "expiresAt"))) issues.Add(new ValidationIssue("$.expiresAt", "must be a string"));
+        return issues;
+    }
+
+    private static bool IsDomain(string value)
+    {
+        return !string.IsNullOrWhiteSpace(value) && value.Contains('.') && value.All(c => char.IsAsciiLetterLower(c) || char.IsAsciiDigit(c) || c is '-' or '.');
+    }
+
+    private static void ValidateFallbackDomain(string? value, string merchantDomain, string path, List<ValidationIssue> issues)
+    {
+        if (string.IsNullOrWhiteSpace(value) || !value.StartsWith("https://", StringComparison.Ordinal)) return;
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || !string.Equals(uri.Host, merchantDomain, StringComparison.OrdinalIgnoreCase))
+        {
+            issues.Add(new ValidationIssue(path, "must stay on the merchant domain"));
+        }
+    }
+}
+
+internal static class PaymentRequestHelpers
+{
+    public static bool TryGetPayload(object? payload, out IReadOnlyDictionary<string, object?> value)
+    {
+        if (payload is IReadOnlyDictionary<string, object?> dictionary && GetString(dictionary, "kind") == "host-mediated-payment-request")
+        {
+            value = dictionary;
+            return true;
+        }
+        value = new Dictionary<string, object?>();
+        return false;
+    }
+
+    public static bool TryGetObject(IReadOnlyDictionary<string, object?> payload, string key, out IReadOnlyDictionary<string, object?> value)
+    {
+        if (payload.TryGetValue(key, out var raw) && raw is IReadOnlyDictionary<string, object?> dictionary)
+        {
+            value = dictionary;
+            return true;
+        }
+        value = new Dictionary<string, object?>();
+        return false;
+    }
+
+    public static string? GetString(IReadOnlyDictionary<string, object?> payload, string key)
+    {
+        return payload.TryGetValue(key, out var raw) ? raw?.ToString() : null;
     }
 }

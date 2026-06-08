@@ -13,13 +13,14 @@ from .models import (
 from .signature import SignatureVerifier
 from .state import DomainStateSnapshot, MessageStateSnapshot, StatePolicy
 from .trust import TrustPolicy
-from .gateway import ActionReceiver, HostActionBroker, MessageSigner, RealtimeMessageBuilder, RouteAuthorizer
+from .gateway import ActionReceiver, HostActionBroker, MessageSigner, PaymentRequestSecurityPolicy, RealtimeMessageBuilder, RouteAuthorizer
 from .validation import (
     ManifestValidator,
     MessageValidator,
     ActionValidator,
     ValidationError,
     ValidationIssue,
+    PaymentRequestPayloadValidator,
 )
 
 __all__ = [
@@ -31,6 +32,8 @@ __all__ = [
     "ManifestValidator",
     "MessageValidator",
     "MessageSigner",
+    "PaymentRequestPayloadValidator",
+    "PaymentRequestSecurityPolicy",
     "RealtimeMailAction",
     "RealtimeMailActionType",
     "RealtimeMailChannel",

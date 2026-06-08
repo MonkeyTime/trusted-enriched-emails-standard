@@ -196,9 +196,74 @@ func splitRoute(route string) []string {
 }
 
 func isPaymentRequest(payload any) bool {
-	value, ok := payload.(map[string]any)
-	if !ok {
-		return false
+	_, ok := paymentPayloadMap(payload)
+	return ok
+}
+
+type PaymentRequestSecurityContext struct {
+	Action                       RealtimeMailAction
+	Message                      RealtimeMailMessage
+	Manifest                     RealtimeMailManifest
+	SourceMatchesSelectedSandbox bool
+	ExpectedInvoiceID            string
+	ExpectedAmount               string
+	ExpectedCurrency             string
+	ProcessedInvoiceIDs          []string
+	Now                          time.Time
+}
+
+type PaymentRequestSecurityDecision struct {
+	OK      bool
+	Reason  string
+	Payload map[string]any
+}
+
+type PaymentRequestSecurityPolicy struct{}
+
+func (PaymentRequestSecurityPolicy) Authorize(context PaymentRequestSecurityContext) PaymentRequestSecurityDecision {
+	if !context.SourceMatchesSelectedSandbox {
+		return rejectedPayment("untrusted_frame_source")
 	}
-	return value["kind"] == "host-mediated-payment-request"
+	payload, ok := paymentPayloadMap(context.Action.Payload)
+	if context.Action.Type != PublishGatewayEvent || !ok {
+		return rejectedPayment("payment_payload_required")
+	}
+	if len((PaymentRequestPayloadValidator{}).Validate(payload)) > 0 {
+		return rejectedPayment("invalid_payment_payload")
+	}
+	if context.Action.MessageID != context.Message.ID {
+		return rejectedPayment("message_mismatch")
+	}
+	if context.Action.Domain != context.Message.Domain || context.Action.Domain != context.Manifest.Domain {
+		return rejectedPayment("domain_mismatch")
+	}
+	merchant := payload["merchant"].(map[string]any)
+	if asString(merchant["domain"]) != context.Message.Domain {
+		return rejectedPayment("merchant_domain_mismatch")
+	}
+	if !hasCapability(context.Message.Capabilities, PaymentRequestUserGesture) {
+		return rejectedPayment("capability_required")
+	}
+	if context.ExpectedInvoiceID != "" && asString(payload["invoiceId"]) != context.ExpectedInvoiceID {
+		return rejectedPayment("invoice_mismatch")
+	}
+	amount := payload["amount"].(map[string]any)
+	if context.ExpectedAmount != "" && asString(amount["value"]) != context.ExpectedAmount {
+		return rejectedPayment("amount_mismatch")
+	}
+	if context.ExpectedCurrency != "" && asString(amount["currency"]) != context.ExpectedCurrency {
+		return rejectedPayment("currency_mismatch")
+	}
+	expiresAt, err := time.Parse(time.RFC3339, asString(payload["expiresAt"]))
+	if err != nil || !expiresAt.After(context.Now) {
+		return rejectedPayment("payment_expired")
+	}
+	if containsString(context.ProcessedInvoiceIDs, asString(payload["invoiceId"])) {
+		return rejectedPayment("duplicate_invoice")
+	}
+	return PaymentRequestSecurityDecision{OK: true, Reason: "ok", Payload: payload}
+}
+
+func rejectedPayment(reason string) PaymentRequestSecurityDecision {
+	return PaymentRequestSecurityDecision{OK: false, Reason: reason}
 }

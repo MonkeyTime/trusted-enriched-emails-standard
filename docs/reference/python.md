@@ -32,6 +32,11 @@ Package: `realtime-mail`
 - `validate(value) -> list[ValidationIssue]`
 - `parse(value) -> RealtimeMailAction`
 
+### `PaymentRequestPayloadValidator`
+
+- `validate(value) -> list[ValidationIssue]`
+- `parse(value) -> dict`
+
 ### `ValidationError`
 
 - `issues: list[ValidationIssue]`
@@ -58,6 +63,12 @@ Package: `realtime-mail`
 - `verify_ed25519(message: RealtimeMailMessage, public_key: str) -> bool`
 
 `verify_ed25519` uses the optional `cryptography` extra. If the dependency is not installed, it fails closed and returns `False`.
+
+### `PaymentRequestSecurityPolicy`
+
+- `authorize(...) -> tuple[bool, str, dict | None]`
+
+Checks the host-mediated payment payload against the source message, manifest domain, iframe source, payment capability, expected invoice, amount, currency, expiry, and processed invoice ids.
 
 ## Gateway Profile
 

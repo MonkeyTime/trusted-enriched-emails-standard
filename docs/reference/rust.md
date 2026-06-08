@@ -33,6 +33,10 @@ Crate: `realtime-mail`
 - `validate(action: &RealtimeMailAction) -> Vec<ValidationIssue>`
 - `parse(action: RealtimeMailAction) -> Result<RealtimeMailAction, ValidationError>`
 
+### `PaymentRequestPayloadValidator`
+
+- `validate(payload: &serde_json::Value) -> Vec<ValidationIssue>`
+
 ## Security
 
 ### `SignatureVerifier`
@@ -51,6 +55,12 @@ Crate: `realtime-mail`
 - `evaluate_domain_state(domain: &str, snapshot: &DomainStateSnapshot) -> TrustedDomainState`
 - `evaluate_message_state(message: &RealtimeMailMessage, snapshot: &MessageStateSnapshot) -> MessageLifecycleState`
 - `should_display(message, domain_snapshot, message_snapshot) -> bool`
+
+### `PaymentRequestSecurityPolicy`
+
+- `authorize(context: PaymentRequestSecurityContext) -> PaymentRequestSecurityDecision`
+
+Checks the host-mediated payment payload against the source message, manifest domain, iframe source, payment capability, expected invoice, amount, currency, expiry, and processed invoice ids.
 
 ## Gateway Profile
 

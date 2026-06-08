@@ -37,6 +37,10 @@ Package namespace: `org.realtimemail`
 - `validate(RealtimeMailAction action): List<ValidationIssue>`
 - `parse(RealtimeMailAction action): RealtimeMailAction`
 
+### `PaymentRequestPayloadValidator`
+
+- `validate(Map<String, Object> payload): List<ValidationIssue>`
+
 ### `SignatureVerifier`
 
 - `verifyEd25519(RealtimeMailMessage message, String publicKey): boolean`
@@ -66,6 +70,12 @@ npm.cmd run java:check
 - `evaluateDomainState(String domain, DomainStateSnapshot snapshot): TrustedDomainState`
 - `evaluateMessageState(RealtimeMailMessage message, MessageStateSnapshot snapshot): MessageLifecycleState`
 - `shouldDisplay(RealtimeMailMessage message, DomainStateSnapshot domainSnapshot, MessageStateSnapshot messageSnapshot): boolean`
+
+### `PaymentRequestSecurityPolicy`
+
+- `authorize(...): PaymentRequestSecurityDecision`
+
+Checks the host-mediated payment payload against the source message, manifest domain, iframe source, payment capability, expected invoice, amount, currency, expiry, and processed invoice ids.
 
 ### `RealtimeGatewayClient`
 

@@ -5,6 +5,7 @@ import java.security.Signature;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -227,6 +228,80 @@ public final class ConformanceSmoke {
     );
     if (new ActionReceiver("billing.acme.tld").receive(crossDomain).ok()) {
       throw new IllegalStateException("cross-domain gateway action accepted");
+    }
+    var paymentManifest = new RealtimeMailManifest(
+      manifest.protocol(),
+      manifest.version(),
+      manifest.domain(),
+      manifest.displayName(),
+      manifest.publicKeys(),
+      List.of(new RealtimeMailChannel(
+        "invoice-events",
+        "Invoices",
+        "/rt/invoices/:userId",
+        "",
+        List.of(TrustCapability.RENDER_HTML, TrustCapability.RENDER_CSS, TrustCapability.RUN_SCRIPT_SANDBOXED, TrustCapability.PAYMENT_REQUEST_USER_GESTURE)
+      ))
+    );
+    var paymentMessage = new RealtimeMessageBuilder(paymentManifest, () -> Instant.parse("2026-06-08T08:00:00Z")).build(
+      "invoice-events",
+      "billing@acme.tld",
+      "Invoice payment",
+      "<button>Pay</button>",
+      Optional.empty(),
+      Optional.empty(),
+      Optional.of(Instant.parse("2026-06-08T08:15:00Z")),
+      Optional.of("invoice-payment-001")
+    );
+    paymentMessage = new MessageSigner(verifier).signEd25519(paymentMessage, keyPair.getPrivate());
+    var paymentPayload = Map.<String, Object>of(
+      "kind", "host-mediated-payment-request",
+      "invoiceId", "2026-0608",
+      "merchant", Map.of("domain", "billing.acme.tld", "displayName", "ACME Billing"),
+      "amount", Map.of("value", "184.90", "currency", "EUR"),
+      "description", "Invoice #2026-0608",
+      "confirmationUx", "qr_code",
+      "fallbackProvider", Map.of("type", "qr_code", "label", "Scan to pay", "qrPayload", "https://billing.acme.tld/pay/invoices/2026-0608"),
+      "expiresAt", "2026-06-08T08:15:00Z"
+    );
+    var paymentAction = new RealtimeMailAction(
+      "pay-invoice",
+      paymentMessage.id(),
+      paymentMessage.domain(),
+      RealtimeMailActionType.PUBLISH_GATEWAY_EVENT,
+      true,
+      Optional.empty(),
+      Optional.of(paymentPayload)
+    );
+    var authorizedPayment = broker.authorize(paymentAction, paymentMessage, paymentManifest, true, Instant.parse("2026-06-08T08:01:00Z"));
+    if (!authorizedPayment.ok()) {
+      throw new IllegalStateException("valid payment host action rejected");
+    }
+    var paymentPolicy = new PaymentRequestSecurityPolicy();
+    if (!paymentPolicy.authorize(paymentAction, paymentMessage, paymentManifest, true, Optional.of("2026-0608"), Optional.of("184.90"), Optional.of("EUR"), List.of(), Instant.parse("2026-06-08T08:01:00Z")).ok()) {
+      throw new IllegalStateException("valid payment rejected");
+    }
+    if (!"untrusted_frame_source".equals(paymentPolicy.authorize(paymentAction, paymentMessage, paymentManifest, false, Optional.empty(), Optional.empty(), Optional.empty(), List.of(), Instant.parse("2026-06-08T08:01:00Z")).reason())) {
+      throw new IllegalStateException("wrong iframe source payment decision");
+    }
+    if (!"amount_mismatch".equals(paymentPolicy.authorize(paymentAction, paymentMessage, paymentManifest, true, Optional.empty(), Optional.of("999.99"), Optional.empty(), List.of(), Instant.parse("2026-06-08T08:01:00Z")).reason())) {
+      throw new IllegalStateException("wrong amount mismatch payment decision");
+    }
+    if (!"duplicate_invoice".equals(paymentPolicy.authorize(paymentAction, paymentMessage, paymentManifest, true, Optional.empty(), Optional.empty(), Optional.empty(), List.of("2026-0608"), Instant.parse("2026-06-08T08:01:00Z")).reason())) {
+      throw new IllegalStateException("wrong duplicate invoice payment decision");
+    }
+    var externalQrPayload = Map.<String, Object>of(
+      "kind", "host-mediated-payment-request",
+      "invoiceId", "2026-0608",
+      "merchant", Map.of("domain", "billing.acme.tld", "displayName", "ACME Billing"),
+      "amount", Map.of("value", "184.90", "currency", "EUR"),
+      "description", "Invoice #2026-0608",
+      "confirmationUx", "qr_code",
+      "fallbackProvider", Map.of("type", "qr_code", "label", "Scan to pay", "qrPayload", "https://evil.example/pay"),
+      "expiresAt", "2026-06-08T08:15:00Z"
+    );
+    if (new PaymentRequestPayloadValidator().validate(externalQrPayload).isEmpty()) {
+      throw new IllegalStateException("external QR payload accepted");
     }
     var statePolicy = new StatePolicy();
     if (statePolicy.evaluateDomainState("billing.acme.tld", new DomainStateSnapshot(

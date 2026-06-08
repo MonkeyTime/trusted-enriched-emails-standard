@@ -10,6 +10,8 @@ This matrix tracks the minimum feature set expected from every official SDK.
 | Message validation | Yes | Yes | Yes | Yes | Yes | Yes |
 | Action model | Yes | Yes | Yes | Yes | Yes | Yes |
 | Action validation | Yes | Yes | Yes | Yes | Yes | Yes |
+| Payment request payload validation | Yes | Yes | Yes | Yes | Yes | Yes |
+| Payment request security policy | Yes | Yes | Yes | Yes | Yes | Yes |
 | Unknown property rejection | Yes | Yes | Yes | Yes | Planned | Yes |
 | Signed `expiresAt` field | Yes | Yes | Yes | Yes | Yes | Yes |
 | Host action broker | Yes | Yes | Yes | Yes | Yes | Yes |

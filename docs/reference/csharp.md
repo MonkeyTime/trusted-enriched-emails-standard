@@ -37,6 +37,10 @@ Namespace: `RealtimeMail`
 - `Validate(RealtimeMailAction action): IReadOnlyList<ValidationIssue>`
 - `Parse(RealtimeMailAction action): RealtimeMailAction`
 
+### `PaymentRequestPayloadValidator`
+
+- `Validate(IReadOnlyDictionary<string, object?> payload): IReadOnlyList<ValidationIssue>`
+
 ### `SignatureVerifier`
 
 - `VerifyEd25519(RealtimeMailMessage message, string publicKey): bool`
@@ -69,6 +73,12 @@ npm.cmd run csharp:conformance
 - `EvaluateDomainState(string domain, DomainStateSnapshot snapshot): TrustedDomainState`
 - `EvaluateMessageState(RealtimeMailMessage message, MessageStateSnapshot snapshot): MessageLifecycleState`
 - `ShouldDisplay(RealtimeMailMessage message, DomainStateSnapshot domainSnapshot, MessageStateSnapshot messageSnapshot): bool`
+
+### `PaymentRequestSecurityPolicy`
+
+- `Authorize(...): PaymentRequestSecurityDecision`
+
+Checks the host-mediated payment payload against the source message, manifest domain, iframe source, payment capability, expected invoice, amount, currency, expiry, and processed invoice ids.
 
 ### `RealtimeGatewayClient`
 

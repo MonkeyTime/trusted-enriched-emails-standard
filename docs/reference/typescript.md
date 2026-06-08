@@ -46,6 +46,12 @@ Package: `@realtimemail/sdk`
 - `parse(value: unknown): HostMediatedPaymentRequest`
 - `validate(value: unknown): ValidationIssue[]`
 
+### `PaymentRequestSecurityPolicy`
+
+- `authorize(context): PaymentRequestSecurityDecision`
+
+Checks the host-mediated payment payload against the source message, manifest domain, iframe source, payment capability, expected invoice, amount, currency, expiry, and processed invoice ids.
+
 ### `HostActionBroker`
 
 - `authorize(context): Promise<HostActionDecision>`

@@ -157,6 +157,26 @@ pub struct GatewayActionDecision {
     pub action: Option<RealtimeMailAction>,
 }
 
+#[derive(Debug, Clone)]
+pub struct PaymentRequestSecurityDecision {
+    pub ok: bool,
+    pub reason: String,
+    pub payload: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PaymentRequestSecurityContext {
+    pub action: RealtimeMailAction,
+    pub message: RealtimeMailMessage,
+    pub manifest: RealtimeMailManifest,
+    pub source_matches_selected_sandbox: bool,
+    pub expected_invoice_id: Option<String>,
+    pub expected_amount: Option<String>,
+    pub expected_currency: Option<String>,
+    pub processed_invoice_ids: HashSet<String>,
+    pub now: String,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct DomainStateSnapshot {
     pub trusted_domains: HashSet<String>,
@@ -267,6 +287,17 @@ impl ActionValidator {
         if action.action_type == RealtimeMailActionType::OpenUrl && !is_https_url_for_domain(action.url.as_deref(), &action.domain) {
             issues.push(issue("$.url", "must be an https URL for the action domain"));
         }
+        if let Some(payload) = payment_payload(&action.payload) {
+            issues.extend(PaymentRequestPayloadValidator::validate(payload).into_iter().map(|item| {
+                issue(&format!("$.payload{}", &item.path[1..]), &item.message)
+            }));
+            if action.action_type != RealtimeMailActionType::PublishGatewayEvent {
+                issues.push(issue("$.type", "must be publish_gateway_event for payment requests"));
+            }
+            if payload.get("merchant").and_then(|merchant| merchant.get("domain")).and_then(|domain| domain.as_str()) != Some(action.domain.as_str()) {
+                issues.push(issue("$.payload.merchant.domain", "must match action domain"));
+            }
+        }
         issues
     }
 
@@ -277,6 +308,111 @@ impl ActionValidator {
         } else {
             Err(ValidationError { issues })
         }
+    }
+}
+
+pub struct PaymentRequestPayloadValidator;
+
+impl PaymentRequestPayloadValidator {
+    pub fn validate(payload: &serde_json::Value) -> Vec<ValidationIssue> {
+        let mut issues = Vec::new();
+        if payload.get("kind").and_then(|value| value.as_str()) != Some("host-mediated-payment-request") {
+            issues.push(issue("$.kind", "must equal host-mediated-payment-request"));
+        }
+        if payload.get("invoiceId").and_then(|value| value.as_str()).is_none_or(|value| value.is_empty()) {
+            issues.push(issue("$.invoiceId", "must be a string"));
+        }
+        let merchant = payload.get("merchant");
+        if merchant.is_none_or(|value| !value.is_object()) {
+            issues.push(issue("$.merchant", "must be an object"));
+        } else if let Some(merchant) = merchant {
+            if !merchant.get("domain").and_then(|value| value.as_str()).is_some_and(is_domain) {
+                issues.push(issue("$.merchant.domain", "must be a valid domain"));
+            }
+            if merchant.get("displayName").and_then(|value| value.as_str()).is_none_or(|value| value.is_empty()) {
+                issues.push(issue("$.merchant.displayName", "must be a string"));
+            }
+        }
+        let amount = payload.get("amount");
+        if amount.is_none_or(|value| !value.is_object()) {
+            issues.push(issue("$.amount", "must be an object"));
+        } else if let Some(amount) = amount {
+            if amount.get("value").and_then(|value| value.as_str()).is_none_or(|value| value.is_empty()) {
+                issues.push(issue("$.amount.value", "must be a string"));
+            }
+            if amount.get("currency").and_then(|value| value.as_str()).is_none_or(|value| value.is_empty()) {
+                issues.push(issue("$.amount.currency", "must be a string"));
+            }
+        }
+        if payload.get("description").and_then(|value| value.as_str()).is_none_or(|value| value.is_empty()) {
+            issues.push(issue("$.description", "must be a string"));
+        }
+        if !matches!(payload.get("confirmationUx").and_then(|value| value.as_str()), Some("browser_payment_request" | "host_confirmation" | "provider_checkout" | "qr_code")) {
+            issues.push(issue("$.confirmationUx", "must be a supported confirmation UX"));
+        }
+        if let Some(fallback) = payload.get("fallbackProvider") {
+            if !matches!(fallback.get("type").and_then(|value| value.as_str()), Some("provider_checkout" | "qr_code")) {
+                issues.push(issue("$.fallbackProvider.type", "must be a supported fallback provider type"));
+            }
+            if fallback.get("label").and_then(|value| value.as_str()).is_none_or(|value| value.is_empty()) {
+                issues.push(issue("$.fallbackProvider.label", "must be a string"));
+            }
+            if let Some(merchant_domain) = merchant.and_then(|value| value.get("domain")).and_then(|value| value.as_str()) {
+                validate_fallback_domain(fallback.get("url").and_then(|value| value.as_str()), merchant_domain, "$.fallbackProvider.url", &mut issues);
+                validate_fallback_domain(fallback.get("qrPayload").and_then(|value| value.as_str()), merchant_domain, "$.fallbackProvider.qrPayload", &mut issues);
+            }
+        }
+        if payload.get("expiresAt").and_then(|value| value.as_str()).is_none_or(|value| value.is_empty()) {
+            issues.push(issue("$.expiresAt", "must be a string"));
+        }
+        issues
+    }
+}
+
+pub struct PaymentRequestSecurityPolicy;
+
+impl PaymentRequestSecurityPolicy {
+    pub fn authorize(context: PaymentRequestSecurityContext) -> PaymentRequestSecurityDecision {
+        if !context.source_matches_selected_sandbox {
+            return rejected_payment("untrusted_frame_source");
+        }
+        let Some(payload) = payment_payload(&context.action.payload) else {
+            return rejected_payment("payment_payload_required");
+        };
+        if context.action.action_type != RealtimeMailActionType::PublishGatewayEvent {
+            return rejected_payment("payment_payload_required");
+        }
+        if !PaymentRequestPayloadValidator::validate(payload).is_empty() {
+            return rejected_payment("invalid_payment_payload");
+        }
+        if context.action.message_id != context.message.id {
+            return rejected_payment("message_mismatch");
+        }
+        if context.action.domain != context.message.domain || context.action.domain != context.manifest.domain {
+            return rejected_payment("domain_mismatch");
+        }
+        if payload.get("merchant").and_then(|value| value.get("domain")).and_then(|value| value.as_str()) != Some(context.message.domain.as_str()) {
+            return rejected_payment("merchant_domain_mismatch");
+        }
+        if !context.message.capabilities.contains(&TrustCapability::PaymentRequestUserGesture) {
+            return rejected_payment("capability_required");
+        }
+        if context.expected_invoice_id.as_deref().is_some_and(|expected| payload.get("invoiceId").and_then(|value| value.as_str()) != Some(expected)) {
+            return rejected_payment("invoice_mismatch");
+        }
+        if context.expected_amount.as_deref().is_some_and(|expected| payload.get("amount").and_then(|value| value.get("value")).and_then(|value| value.as_str()) != Some(expected)) {
+            return rejected_payment("amount_mismatch");
+        }
+        if context.expected_currency.as_deref().is_some_and(|expected| payload.get("amount").and_then(|value| value.get("currency")).and_then(|value| value.as_str()) != Some(expected)) {
+            return rejected_payment("currency_mismatch");
+        }
+        if payload.get("expiresAt").and_then(|value| value.as_str()).is_none_or(|expires_at| expires_at <= context.now.as_str()) {
+            return rejected_payment("payment_expired");
+        }
+        if payload.get("invoiceId").and_then(|value| value.as_str()).is_some_and(|invoice_id| context.processed_invoice_ids.contains(invoice_id)) {
+            return rejected_payment("duplicate_invoice");
+        }
+        PaymentRequestSecurityDecision { ok: true, reason: "ok".to_string(), payload: Some(payload.clone()) }
     }
 }
 
@@ -404,10 +540,37 @@ impl<'a> HostActionBroker<'a> {
 }
 
 fn is_payment_request(action: &RealtimeMailAction) -> bool {
-    action.payload.as_ref()
-        .and_then(|payload| payload.get("kind"))
-        .and_then(|kind| kind.as_str())
-        .is_some_and(|kind| kind == "host-mediated-payment-request")
+    payment_payload(&action.payload).is_some()
+}
+
+fn payment_payload(payload: &Option<serde_json::Value>) -> Option<&serde_json::Value> {
+    payload.as_ref().filter(|value| {
+        value.get("kind")
+            .and_then(|kind| kind.as_str())
+            .is_some_and(|kind| kind == "host-mediated-payment-request")
+    })
+}
+
+fn validate_fallback_domain(value: Option<&str>, merchant_domain: &str, path: &str, issues: &mut Vec<ValidationIssue>) {
+    let Some(value) = value else {
+        return;
+    };
+    if !value.starts_with("https://") {
+        return;
+    }
+    let rest = value.trim_start_matches("https://");
+    let host = rest.split('/').next().unwrap_or("").split('?').next().unwrap_or("");
+    if host != merchant_domain {
+        issues.push(issue(path, "must stay on the merchant domain"));
+    }
+}
+
+fn rejected_payment(reason: &str) -> PaymentRequestSecurityDecision {
+    PaymentRequestSecurityDecision {
+        ok: false,
+        reason: reason.to_string(),
+        payload: None,
+    }
 }
 
 pub struct RealtimeMessageBuilder {
@@ -764,6 +927,107 @@ mod tests {
             url: Some("https://evil.example/invoices/1".to_string()),
             ..action
         }).ok);
+        let mut payment_manifest = manifest.clone();
+        payment_manifest.channels[0].capabilities = vec![
+            TrustCapability::RenderHtml,
+            TrustCapability::RenderCss,
+            TrustCapability::RunScriptSandboxed,
+            TrustCapability::PaymentRequestUserGesture,
+        ];
+        let payment_message = RealtimeMessageBuilder { manifest: payment_manifest.clone() }
+            .build(RealtimeMessageInput {
+                id: "invoice-payment-001".to_string(),
+                channel_id: "invoice-events".to_string(),
+                from: "billing@acme.tld".to_string(),
+                subject: "Invoice payment".to_string(),
+                html: "<button>Pay</button>".to_string(),
+                css: None,
+                script: None,
+                capabilities: None,
+                received_at: "2026-06-08T08:00:00.000Z".to_string(),
+                expires_at: Some("2026-06-08T08:15:00.000Z".to_string()),
+            })
+            .expect("payment message");
+        let payment_message = MessageSigner::sign_ed25519(&payment_message, &signing_key).expect("payment signed");
+        let payment_payload = serde_json::json!({
+            "kind": "host-mediated-payment-request",
+            "invoiceId": "2026-0608",
+            "merchant": { "domain": "billing.acme.tld", "displayName": "ACME Billing" },
+            "amount": { "value": "184.90", "currency": "EUR" },
+            "description": "Invoice #2026-0608",
+            "confirmationUx": "qr_code",
+            "fallbackProvider": {
+                "type": "qr_code",
+                "label": "Scan to pay",
+                "qrPayload": "https://billing.acme.tld/pay/invoices/2026-0608"
+            },
+            "expiresAt": "2026-06-08T08:15:00.000Z"
+        });
+        let payment_action = RealtimeMailAction {
+            id: "pay-invoice".to_string(),
+            message_id: payment_message.id.clone(),
+            domain: payment_message.domain.clone(),
+            action_type: RealtimeMailActionType::PublishGatewayEvent,
+            requires_user_gesture: true,
+            url: None,
+            payload: Some(payment_payload.clone()),
+        };
+        assert!(broker.authorize(payment_action.clone(), &payment_message, &payment_manifest, true, "2026-06-08T08:01:00.000Z").ok);
+        assert!(PaymentRequestSecurityPolicy::authorize(PaymentRequestSecurityContext {
+            action: payment_action.clone(),
+            message: payment_message.clone(),
+            manifest: payment_manifest.clone(),
+            source_matches_selected_sandbox: true,
+            expected_invoice_id: Some("2026-0608".to_string()),
+            expected_amount: Some("184.90".to_string()),
+            expected_currency: Some("EUR".to_string()),
+            processed_invoice_ids: HashSet::new(),
+            now: "2026-06-08T08:01:00.000Z".to_string(),
+        }).ok);
+        assert_eq!(PaymentRequestSecurityPolicy::authorize(PaymentRequestSecurityContext {
+            action: payment_action.clone(),
+            message: payment_message.clone(),
+            manifest: payment_manifest.clone(),
+            source_matches_selected_sandbox: false,
+            expected_invoice_id: None,
+            expected_amount: None,
+            expected_currency: None,
+            processed_invoice_ids: HashSet::new(),
+            now: "2026-06-08T08:01:00.000Z".to_string(),
+        }).reason, "untrusted_frame_source");
+        assert_eq!(PaymentRequestSecurityPolicy::authorize(PaymentRequestSecurityContext {
+            action: payment_action.clone(),
+            message: payment_message.clone(),
+            manifest: payment_manifest.clone(),
+            source_matches_selected_sandbox: true,
+            expected_invoice_id: None,
+            expected_amount: Some("999.99".to_string()),
+            expected_currency: None,
+            processed_invoice_ids: HashSet::new(),
+            now: "2026-06-08T08:01:00.000Z".to_string(),
+        }).reason, "amount_mismatch");
+        assert_eq!(PaymentRequestSecurityPolicy::authorize(PaymentRequestSecurityContext {
+            action: payment_action.clone(),
+            message: payment_message.clone(),
+            manifest: payment_manifest.clone(),
+            source_matches_selected_sandbox: true,
+            expected_invoice_id: None,
+            expected_amount: None,
+            expected_currency: None,
+            processed_invoice_ids: HashSet::from(["2026-0608".to_string()]),
+            now: "2026-06-08T08:01:00.000Z".to_string(),
+        }).reason, "duplicate_invoice");
+        let external_qr_payload = serde_json::json!({
+            "kind": "host-mediated-payment-request",
+            "invoiceId": "2026-0608",
+            "merchant": { "domain": "billing.acme.tld", "displayName": "ACME Billing" },
+            "amount": { "value": "184.90", "currency": "EUR" },
+            "description": "Invoice #2026-0608",
+            "confirmationUx": "qr_code",
+            "fallbackProvider": { "type": "qr_code", "label": "Scan to pay", "qrPayload": "https://evil.example/pay" },
+            "expiresAt": "2026-06-08T08:15:00.000Z"
+        });
+        assert!(!PaymentRequestPayloadValidator::validate(&external_qr_payload).is_empty());
         assert_eq!(
             StatePolicy::evaluate_domain_state("billing.acme.tld", &DomainStateSnapshot {
                 trusted_domains: HashSet::from(["billing.acme.tld".to_string()]),

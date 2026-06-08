@@ -7,6 +7,7 @@ namespace RealtimeMail;
 public sealed record HostActionDecision(bool Ok, string Reason, RealtimeMailAction? Action = null);
 public sealed record RouteAuthorizationDecision(bool Ok, string Reason, RealtimeMailChannel? Channel = null);
 public sealed record GatewayActionDecision(bool Ok, string Reason, RealtimeMailAction? Action = null);
+public sealed record PaymentRequestSecurityDecision(bool Ok, string Reason, IReadOnlyDictionary<string, object?>? Payload = null);
 
 public sealed class HostActionBroker
 {
@@ -180,4 +181,36 @@ public sealed class ActionReceiver
         if (!string.Equals(action.Domain, domain, StringComparison.OrdinalIgnoreCase)) return new GatewayActionDecision(false, "domain_not_allowed");
         return new GatewayActionDecision(true, "ok", action);
     }
+}
+
+public sealed class PaymentRequestSecurityPolicy
+{
+    public PaymentRequestSecurityDecision Authorize(
+        RealtimeMailAction action,
+        RealtimeMailMessage message,
+        RealtimeMailManifest manifest,
+        bool sourceMatchesSelectedSandbox,
+        string? expectedInvoiceId = null,
+        string? expectedAmount = null,
+        string? expectedCurrency = null,
+        IReadOnlySet<string>? processedInvoiceIds = null,
+        DateTimeOffset? now = null)
+    {
+        if (!sourceMatchesSelectedSandbox) return Rejected("untrusted_frame_source");
+        if (action.Type != RealtimeMailActionType.PublishGatewayEvent || !PaymentRequestHelpers.TryGetPayload(action.Payload, out var payload)) return Rejected("payment_payload_required");
+        if (new PaymentRequestPayloadValidator().Validate(payload).Count > 0) return Rejected("invalid_payment_payload");
+        if (action.MessageId != message.Id) return Rejected("message_mismatch");
+        if (action.Domain != message.Domain || action.Domain != manifest.Domain) return Rejected("domain_mismatch");
+        if (!PaymentRequestHelpers.TryGetObject(payload, "merchant", out var merchant) || PaymentRequestHelpers.GetString(merchant, "domain") != message.Domain) return Rejected("merchant_domain_mismatch");
+        if (!message.Capabilities.Contains(TrustCapability.PaymentRequestUserGesture)) return Rejected("capability_required");
+        if (expectedInvoiceId is not null && PaymentRequestHelpers.GetString(payload, "invoiceId") != expectedInvoiceId) return Rejected("invoice_mismatch");
+        PaymentRequestHelpers.TryGetObject(payload, "amount", out var amount);
+        if (expectedAmount is not null && PaymentRequestHelpers.GetString(amount, "value") != expectedAmount) return Rejected("amount_mismatch");
+        if (expectedCurrency is not null && PaymentRequestHelpers.GetString(amount, "currency") != expectedCurrency) return Rejected("currency_mismatch");
+        if (!DateTimeOffset.TryParse(PaymentRequestHelpers.GetString(payload, "expiresAt"), out var expiresAt) || expiresAt <= (now ?? DateTimeOffset.UtcNow)) return Rejected("payment_expired");
+        if ((processedInvoiceIds ?? new HashSet<string>()).Contains(PaymentRequestHelpers.GetString(payload, "invoiceId") ?? "")) return Rejected("duplicate_invoice");
+        return new PaymentRequestSecurityDecision(true, "ok", payload);
+    }
+
+    private static PaymentRequestSecurityDecision Rejected(string reason) => new(false, reason);
 }

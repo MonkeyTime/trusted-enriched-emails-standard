@@ -118,6 +118,17 @@ func (ActionValidator) Validate(action RealtimeMailAction) []ValidationIssue {
 	if action.Type == OpenURL && !isHttpsURLForDomain(action.URL, action.Domain) {
 		issues = append(issues, ValidationIssue{"$.url", "must be an https URL for the action domain"})
 	}
+	if payload, ok := paymentPayloadMap(action.Payload); ok {
+		for _, issue := range (PaymentRequestPayloadValidator{}).Validate(payload) {
+			issues = append(issues, ValidationIssue{"$.payload" + issue.Path[1:], issue.Message})
+		}
+		if action.Type != PublishGatewayEvent {
+			issues = append(issues, ValidationIssue{"$.type", "must be publish_gateway_event for payment requests"})
+		}
+		if merchant, ok := payload["merchant"].(map[string]any); ok && merchant["domain"] != action.Domain {
+			issues = append(issues, ValidationIssue{"$.payload.merchant.domain", "must match action domain"})
+		}
+	}
 	return issues
 }
 
@@ -147,4 +158,87 @@ func hasCapability(capabilities []TrustCapability, needle TrustCapability) bool 
 func isHttpsURLForDomain(value string, domain string) bool {
 	parsed, err := url.Parse(value)
 	return err == nil && parsed.Scheme == "https" && parsed.Hostname() == domain
+}
+
+type PaymentRequestPayloadValidator struct{}
+
+func (PaymentRequestPayloadValidator) Validate(payload map[string]any) []ValidationIssue {
+	var issues []ValidationIssue
+	if payload["kind"] != "host-mediated-payment-request" {
+		issues = append(issues, ValidationIssue{"$.kind", "must equal host-mediated-payment-request"})
+	}
+	if asString(payload["invoiceId"]) == "" {
+		issues = append(issues, ValidationIssue{"$.invoiceId", "must be a string"})
+	}
+	merchant, ok := payload["merchant"].(map[string]any)
+	if !ok {
+		issues = append(issues, ValidationIssue{"$.merchant", "must be an object"})
+	} else {
+		if !domainPattern.MatchString(asString(merchant["domain"])) {
+			issues = append(issues, ValidationIssue{"$.merchant.domain", "must be a valid domain"})
+		}
+		if asString(merchant["displayName"]) == "" {
+			issues = append(issues, ValidationIssue{"$.merchant.displayName", "must be a string"})
+		}
+	}
+	amount, ok := payload["amount"].(map[string]any)
+	if !ok {
+		issues = append(issues, ValidationIssue{"$.amount", "must be an object"})
+	} else {
+		if asString(amount["value"]) == "" {
+			issues = append(issues, ValidationIssue{"$.amount.value", "must be a string"})
+		}
+		if asString(amount["currency"]) == "" {
+			issues = append(issues, ValidationIssue{"$.amount.currency", "must be a string"})
+		}
+	}
+	if asString(payload["description"]) == "" {
+		issues = append(issues, ValidationIssue{"$.description", "must be a string"})
+	}
+	if !containsString([]string{"browser_payment_request", "host_confirmation", "provider_checkout", "qr_code"}, asString(payload["confirmationUx"])) {
+		issues = append(issues, ValidationIssue{"$.confirmationUx", "must be a supported confirmation UX"})
+	}
+	if fallback, ok := payload["fallbackProvider"].(map[string]any); ok {
+		if !containsString([]string{"provider_checkout", "qr_code"}, asString(fallback["type"])) {
+			issues = append(issues, ValidationIssue{"$.fallbackProvider.type", "must be a supported fallback provider type"})
+		}
+		if asString(fallback["label"]) == "" {
+			issues = append(issues, ValidationIssue{"$.fallbackProvider.label", "must be a string"})
+		}
+		if ok && merchant != nil {
+			for _, key := range []string{"url", "qrPayload"} {
+				value := asString(fallback[key])
+				if value == "" {
+					continue
+				}
+				parsed, err := url.Parse(value)
+				if err == nil && parsed.Scheme == "https" && parsed.Hostname() != asString(merchant["domain"]) {
+					issues = append(issues, ValidationIssue{"$.fallbackProvider." + key, "must stay on the merchant domain"})
+				}
+			}
+		}
+	}
+	if asString(payload["expiresAt"]) == "" {
+		issues = append(issues, ValidationIssue{"$.expiresAt", "must be a string"})
+	}
+	return issues
+}
+
+func paymentPayloadMap(payload any) (map[string]any, bool) {
+	value, ok := payload.(map[string]any)
+	return value, ok && value["kind"] == "host-mediated-payment-request"
+}
+
+func asString(value any) string {
+	text, _ := value.(string)
+	return text
+}
+
+func containsString(values []string, needle string) bool {
+	for _, value := range values {
+		if value == needle {
+			return true
+		}
+	}
+	return false
 }

@@ -3,6 +3,7 @@ package org.realtimemail;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -18,6 +19,18 @@ public final class ActionValidator {
     if (!action.requiresUserGesture()) issues.add(new ValidationIssue("$.requiresUserGesture", "must be true"));
     if (action.type() == RealtimeMailActionType.OPEN_URL && !isHttpsUrlForDomain(action.url(), action.domain())) {
       issues.add(new ValidationIssue("$.url", "must be an https URL for the action domain"));
+    }
+    if (paymentPayload(action.payload()).isPresent()) {
+      var payload = paymentPayload(action.payload()).get();
+      for (var issue : new PaymentRequestPayloadValidator().validate(payload)) {
+        issues.add(new ValidationIssue("$.payload" + issue.path().substring(1), issue.message()));
+      }
+      if (action.type() != RealtimeMailActionType.PUBLISH_GATEWAY_EVENT) {
+        issues.add(new ValidationIssue("$.type", "must be publish_gateway_event for payment requests"));
+      }
+      if (payload.get("merchant") instanceof Map<?, ?> merchant && !action.domain().equals(merchant.get("domain"))) {
+        issues.add(new ValidationIssue("$.payload.merchant.domain", "must match action domain"));
+      }
     }
     return issues;
   }
@@ -36,5 +49,12 @@ public final class ActionValidator {
     } catch (Exception _error) {
       return false;
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  private static Optional<Map<String, Object>> paymentPayload(Optional<Object> payload) {
+    if (payload.isEmpty() || !(payload.get() instanceof Map<?, ?> value)) return Optional.empty();
+    if (!"host-mediated-payment-request".equals(value.get("kind"))) return Optional.empty();
+    return Optional.of((Map<String, Object>) value);
   }
 }

@@ -18,6 +18,8 @@ from realtime_mail import (  # noqa: E402
     ActionReceiver,
     HostActionBroker,
     MessageSigner,
+    PaymentRequestPayloadValidator,
+    PaymentRequestSecurityPolicy,
     RealtimeMailActionType,
     RealtimeMailChannel,
     RealtimeMailManifest,
@@ -100,6 +102,82 @@ def main() -> int:
     assert ActionReceiver("billing.acme.tld").receive(action)[0]
     cross_domain = {**action, "domain": "evil.example", "url": "https://evil.example/invoices/1"}
     assert not ActionReceiver("billing.acme.tld").receive(cross_domain)[0]
+    payment_message = builder.build(
+        id="invoice-payment-001",
+        channel_id="invoice-events",
+        from_address="billing@acme.tld",
+        subject="Invoice payment",
+        html="<button>Pay</button>",
+        capabilities=[
+            TrustCapability.RENDER_HTML,
+            TrustCapability.RENDER_CSS,
+            TrustCapability.RUN_SCRIPT_SANDBOXED,
+            TrustCapability.PAYMENT_REQUEST_USER_GESTURE,
+        ],
+        expires_at=datetime(2026, 6, 8, 8, 15, tzinfo=timezone.utc),
+    )
+    payment_message = MessageSigner().sign_ed25519(payment_message, private_key)
+    payment_payload = {
+        "kind": "host-mediated-payment-request",
+        "invoiceId": "2026-0608",
+        "merchant": {"domain": "billing.acme.tld", "displayName": "ACME Billing"},
+        "amount": {"value": "184.90", "currency": "EUR"},
+        "description": "Invoice #2026-0608",
+        "confirmationUx": "qr_code",
+        "fallbackProvider": {
+            "type": "qr_code",
+            "label": "Scan to pay",
+            "qrPayload": "https://billing.acme.tld/pay/invoices/2026-0608",
+        },
+        "expiresAt": "2026-06-08T08:15:00Z",
+    }
+    payment_action_value = {
+        "id": "pay-invoice",
+        "messageId": payment_message.id,
+        "domain": payment_message.domain,
+        "type": RealtimeMailActionType.PUBLISH_GATEWAY_EVENT.value,
+        "requiresUserGesture": True,
+        "payload": payment_payload,
+    }
+    payment_action = broker.authorize(payment_action_value, payment_message, manifest, True, datetime(2026, 6, 8, 8, 1, tzinfo=timezone.utc))[2]
+    assert payment_action is not None
+    assert PaymentRequestSecurityPolicy.authorize(
+        action=payment_action,
+        message=payment_message,
+        manifest=manifest,
+        source_matches_selected_sandbox=True,
+        expected_invoice_id="2026-0608",
+        expected_amount="184.90",
+        expected_currency="EUR",
+        now=datetime(2026, 6, 8, 8, 1, tzinfo=timezone.utc),
+    )[0]
+    assert PaymentRequestSecurityPolicy.authorize(
+        action=payment_action,
+        message=payment_message,
+        manifest=manifest,
+        source_matches_selected_sandbox=False,
+        now=datetime(2026, 6, 8, 8, 1, tzinfo=timezone.utc),
+    )[1] == "untrusted_frame_source"
+    assert PaymentRequestSecurityPolicy.authorize(
+        action=payment_action,
+        message=payment_message,
+        manifest=manifest,
+        source_matches_selected_sandbox=True,
+        expected_amount="999.99",
+        now=datetime(2026, 6, 8, 8, 1, tzinfo=timezone.utc),
+    )[1] == "amount_mismatch"
+    assert PaymentRequestSecurityPolicy.authorize(
+        action=payment_action,
+        message=payment_message,
+        manifest=manifest,
+        source_matches_selected_sandbox=True,
+        processed_invoice_ids={"2026-0608"},
+        now=datetime(2026, 6, 8, 8, 1, tzinfo=timezone.utc),
+    )[1] == "duplicate_invoice"
+    assert PaymentRequestPayloadValidator.validate({
+        **payment_payload,
+        "fallbackProvider": {**payment_payload["fallbackProvider"], "qrPayload": "https://evil.example/pay"},
+    })
     assert StatePolicy.evaluate_domain_state("billing.acme.tld", DomainStateSnapshot(trusted_domains={"billing.acme.tld"})) == TrustedDomainState.TRUSTED
     assert StatePolicy.evaluate_domain_state("billing.acme.tld", DomainStateSnapshot(trusted_domains={"billing.acme.tld"}, muted_domains={"billing.acme.tld"})) == TrustedDomainState.MUTED
     assert StatePolicy.evaluate_domain_state("billing.acme.tld", DomainStateSnapshot(trusted_domains={"billing.acme.tld"}, revoked_domains={"billing.acme.tld"})) == TrustedDomainState.REVOKED

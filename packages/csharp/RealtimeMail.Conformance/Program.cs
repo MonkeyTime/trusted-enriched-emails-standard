@@ -212,6 +212,59 @@ static bool VerifyGatewayProfile()
     if (!new ActionReceiver("billing.acme.tld").Receive(action).Ok) return false;
     var crossDomain = action with { Domain = "evil.example", Url = "https://evil.example/invoices/1" };
     if (new ActionReceiver("billing.acme.tld").Receive(crossDomain).Ok) return false;
+    var paymentManifest = manifest with
+    {
+        Channels = new[]
+        {
+            new RealtimeMailChannel(
+                "invoice-events",
+                "Invoices",
+                "/rt/invoices/:userId",
+                null,
+                new[] { TrustCapability.RenderHtml, TrustCapability.RenderCss, TrustCapability.RunScriptSandboxed, TrustCapability.PaymentRequestUserGesture }
+            )
+        }
+    };
+    var paymentMessage = new RealtimeMessageBuilder(paymentManifest, () => DateTimeOffset.Parse("2026-06-08T08:00:00Z")).Build(
+        "invoice-events",
+        "billing@acme.tld",
+        "Invoice payment",
+        "<button>Pay</button>",
+        expiresAt: DateTimeOffset.Parse("2026-06-08T08:15:00Z"),
+        id: "invoice-payment-001"
+    );
+    paymentMessage = new MessageSigner().SignEcdsaP256(paymentMessage, ecdsa);
+    var paymentPayload = new Dictionary<string, object?>
+    {
+        ["kind"] = "host-mediated-payment-request",
+        ["invoiceId"] = "2026-0608",
+        ["merchant"] = new Dictionary<string, object?> { ["domain"] = "billing.acme.tld", ["displayName"] = "ACME Billing" },
+        ["amount"] = new Dictionary<string, object?> { ["value"] = "184.90", ["currency"] = "EUR" },
+        ["description"] = "Invoice #2026-0608",
+        ["confirmationUx"] = "qr_code",
+        ["fallbackProvider"] = new Dictionary<string, object?> { ["type"] = "qr_code", ["label"] = "Scan to pay", ["qrPayload"] = "https://billing.acme.tld/pay/invoices/2026-0608" },
+        ["expiresAt"] = "2026-06-08T08:15:00Z"
+    };
+    var paymentAction = new RealtimeMailAction(
+        "pay-invoice",
+        paymentMessage.Id,
+        paymentMessage.Domain,
+        RealtimeMailActionType.PublishGatewayEvent,
+        true,
+        null,
+        paymentPayload
+    );
+    if (!broker.Authorize(paymentAction, paymentMessage, paymentManifest, true, DateTimeOffset.Parse("2026-06-08T08:01:00Z")).Ok) return false;
+    var paymentPolicy = new PaymentRequestSecurityPolicy();
+    if (!paymentPolicy.Authorize(paymentAction, paymentMessage, paymentManifest, true, "2026-0608", "184.90", "EUR", new HashSet<string>(), DateTimeOffset.Parse("2026-06-08T08:01:00Z")).Ok) return false;
+    if (paymentPolicy.Authorize(paymentAction, paymentMessage, paymentManifest, false, now: DateTimeOffset.Parse("2026-06-08T08:01:00Z")).Reason != "untrusted_frame_source") return false;
+    if (paymentPolicy.Authorize(paymentAction, paymentMessage, paymentManifest, true, expectedAmount: "999.99", now: DateTimeOffset.Parse("2026-06-08T08:01:00Z")).Reason != "amount_mismatch") return false;
+    if (paymentPolicy.Authorize(paymentAction, paymentMessage, paymentManifest, true, processedInvoiceIds: new HashSet<string> { "2026-0608" }, now: DateTimeOffset.Parse("2026-06-08T08:01:00Z")).Reason != "duplicate_invoice") return false;
+    var externalQrPayload = new Dictionary<string, object?>(paymentPayload)
+    {
+        ["fallbackProvider"] = new Dictionary<string, object?> { ["type"] = "qr_code", ["label"] = "Scan to pay", ["qrPayload"] = "https://evil.example/pay" }
+    };
+    if (new PaymentRequestPayloadValidator().Validate(externalQrPayload).Count == 0) return false;
 
     var statePolicy = new StatePolicy();
     if (statePolicy.EvaluateDomainState("billing.acme.tld", new DomainStateSnapshot(

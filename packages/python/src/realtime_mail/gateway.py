@@ -5,10 +5,10 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
-from .models import MailSource, RealtimeMailAction, RealtimeMailManifest, RealtimeMailMessage, TrustCapability, action_from_dict
+from .models import MailSource, RealtimeMailAction, RealtimeMailActionType, RealtimeMailManifest, RealtimeMailMessage, TrustCapability, action_from_dict
 from .signature import SignatureVerifier
 from .trust import TrustPolicy
-from .validation import ActionValidator, ValidationError, ValidationIssue, MessageValidator
+from .validation import ActionValidator, PaymentRequestPayloadValidator, ValidationError, ValidationIssue, MessageValidator
 
 
 class HostActionBroker:
@@ -125,6 +125,49 @@ class ActionReceiver:
         if action.domain != self.domain:
             return False, "domain_not_allowed", None
         return True, "ok", action
+
+
+class PaymentRequestSecurityPolicy:
+    @staticmethod
+    def authorize(
+        *,
+        action: RealtimeMailAction,
+        message: RealtimeMailMessage,
+        manifest: RealtimeMailManifest,
+        source_matches_selected_sandbox: bool,
+        expected_invoice_id: str | None = None,
+        expected_amount: str | None = None,
+        expected_currency: str | None = None,
+        processed_invoice_ids: list[str] | set[str] | None = None,
+        now: datetime | None = None,
+    ) -> tuple[bool, str, dict[str, Any] | None]:
+        if not source_matches_selected_sandbox:
+            return False, "untrusted_frame_source", None
+        if action.type != RealtimeMailActionType.PUBLISH_GATEWAY_EVENT or not isinstance(action.payload, dict):
+            return False, "payment_payload_required", None
+        if PaymentRequestPayloadValidator.validate(action.payload):
+            return False, "invalid_payment_payload", None
+        payload = PaymentRequestPayloadValidator.parse(action.payload)
+        if action.message_id != message.id:
+            return False, "message_mismatch", None
+        if action.domain != message.domain or action.domain != manifest.domain:
+            return False, "domain_mismatch", None
+        if payload["merchant"]["domain"] != message.domain:
+            return False, "merchant_domain_mismatch", None
+        if TrustCapability.PAYMENT_REQUEST_USER_GESTURE not in message.capabilities:
+            return False, "capability_required", None
+        if expected_invoice_id is not None and payload["invoiceId"] != expected_invoice_id:
+            return False, "invoice_mismatch", None
+        if expected_amount is not None and payload["amount"]["value"] != expected_amount:
+            return False, "amount_mismatch", None
+        if expected_currency is not None and payload["amount"]["currency"] != expected_currency:
+            return False, "currency_mismatch", None
+        expires_at = datetime.fromisoformat(payload["expiresAt"].replace("Z", "+00:00"))
+        if expires_at <= (now or datetime.now(timezone.utc)):
+            return False, "payment_expired", None
+        if payload["invoiceId"] in (processed_invoice_ids or []):
+            return False, "duplicate_invoice", None
+        return True, "ok", payload
 
 
 def _route_matches(pattern: str, route: str, user_id: str | None) -> bool:
