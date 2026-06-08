@@ -1,6 +1,6 @@
 export type Locale = "en" | "fr";
 
-export const locale: Locale = "en";
+let locale: Locale = loadLocale();
 
 const dictionaries = {
   en: {
@@ -26,6 +26,7 @@ const dictionaries = {
     resizeSidebar: "Resize trusted domains column",
     resizeInbox: "Resize message list column",
     resizeReader: "Resize reader and audit columns",
+    language: "Language",
     connectGateway: "Connect",
     publishSigned: "Signed event",
     publishGame: "Mini game",
@@ -45,7 +46,26 @@ const dictionaries = {
     gatewayMessageVerified: "Verified gateway message: {id}",
     gatewayMessageRejected: "Rejected gateway message: {id}",
     gatewayMessageSuppressed: "Suppressed deleted or revoked gateway message: {id}",
+    gatewayReconnecting: "Gateway reconnect scheduled: attempt {count}",
+    gatewayDiagnostics: "Gateway diagnostics",
+    lastError: "Last error",
+    reconnectAttempts: "Reconnect attempts",
+    lastEvent: "Last event",
+    never: "never",
     audit: "Audit",
+    security: "Security",
+    state: "State",
+    domainState: "Domain state",
+    messageState: "Message state",
+    signature: "Signature",
+    capabilities: "Capabilities",
+    expiry: "Expiry",
+    sandbox: "Sandbox",
+    paymentPayload: "Payment payload",
+    cspNetwork: "Network blocked by CSP",
+    allowed: "allowed",
+    denied: "denied",
+    none: "none",
     trustedToggleTitle: "Enable or revoke domain trust",
     connected: "connected",
     auth: "auth",
@@ -71,6 +91,8 @@ const dictionaries = {
     eventDomainRemoved: "Removed trusted domain subscription: {domain}",
     eventDomainMuted: "Muted trusted domain: {domain}",
     eventMessageDeleted: "Deleted realtime message: {id}",
+    eventMessageDismissed: "Dismissed realtime message: {id}",
+    eventMessageSuperseded: "Superseded realtime message: {id}",
     eventBroker: "Broker -> {domain}/{channel}",
     eventSandboxAction: "Sandbox action: {action}",
     eventSandboxActionAccepted: "Sandbox action accepted: {action}",
@@ -78,6 +100,8 @@ const dictionaries = {
     eventPaymentCompleted: "Payment completed for invoice: {invoice}",
     eventPaymentFallback: "Host payment UI fallback: {reason}",
     deleteMessage: "Delete",
+    dismissMessage: "Dismiss",
+    supersedeMessage: "Supersede",
     muteDomain: "Mute domain",
     domainMuted: "Muted",
     removeDomain: "Remove domain",
@@ -101,6 +125,7 @@ const dictionaries = {
     invoiceBody: "Your monthly invoice is available. This domain is approved for sandboxed HTML, CSS, and JS.",
     total: "Total",
     dueDate: "Due date",
+    dueDateValue: "June 18, 2026",
     payButton: "Simulate payment",
     invoiceActionResult: "Local action accepted: the host would receive a signed request.",
     statusSubject: "Incident resolved on eu-west",
@@ -147,6 +172,7 @@ const dictionaries = {
     resizeSidebar: "Redimensionner la colonne des domaines",
     resizeInbox: "Redimensionner la colonne des messages",
     resizeReader: "Redimensionner la lecture et l'audit",
+    language: "Langue",
     connectGateway: "Connecter",
     publishSigned: "Event signe",
     publishGame: "Mini-jeu",
@@ -166,7 +192,26 @@ const dictionaries = {
     gatewayMessageVerified: "Message gateway verifie: {id}",
     gatewayMessageRejected: "Message gateway rejete: {id}",
     gatewayMessageSuppressed: "Message gateway supprime ou revoque masque: {id}",
+    gatewayReconnecting: "Reconnexion gateway planifiee: tentative {count}",
+    gatewayDiagnostics: "Diagnostics gateway",
+    lastError: "Derniere erreur",
+    reconnectAttempts: "Tentatives de reconnexion",
+    lastEvent: "Dernier evenement",
+    never: "jamais",
     audit: "Audit",
+    security: "Securite",
+    state: "Etat",
+    domainState: "Etat domaine",
+    messageState: "Etat message",
+    signature: "Signature",
+    capabilities: "Capabilities",
+    expiry: "Expiration",
+    sandbox: "Sandbox",
+    paymentPayload: "Payload paiement",
+    cspNetwork: "Reseau bloque par CSP",
+    allowed: "autorise",
+    denied: "refuse",
+    none: "aucun",
     trustedToggleTitle: "Activer ou retirer la confiance du domaine",
     connected: "connecte",
     auth: "auth",
@@ -192,6 +237,8 @@ const dictionaries = {
     eventDomainRemoved: "Abonnement trusted domain supprime: {domain}",
     eventDomainMuted: "Domaine trusted mis en sourdine: {domain}",
     eventMessageDeleted: "Message realtime supprime: {id}",
+    eventMessageDismissed: "Message realtime ignore: {id}",
+    eventMessageSuperseded: "Message realtime remplace: {id}",
     eventBroker: "Broker -> {domain}/{channel}",
     eventSandboxAction: "Action sandbox: {action}",
     eventSandboxActionAccepted: "Action sandbox acceptee: {action}",
@@ -199,6 +246,8 @@ const dictionaries = {
     eventPaymentCompleted: "Paiement effectue pour la facture: {invoice}",
     eventPaymentFallback: "Fallback UI paiement host: {reason}",
     deleteMessage: "Supprimer",
+    dismissMessage: "Ignorer",
+    supersedeMessage: "Remplacer",
     muteDomain: "Sourdine domaine",
     domainMuted: "Sourdine",
     removeDomain: "Supprimer domaine",
@@ -222,6 +271,7 @@ const dictionaries = {
     invoiceBody: "Votre facture mensuelle est disponible. Ce domaine est approuve pour HTML, CSS et JS sandboxe.",
     total: "Total",
     dueDate: "Echeance",
+    dueDateValue: "18 juin 2026",
     payButton: "Simuler le paiement",
     invoiceActionResult: "Action locale acceptee: le host recevrait une demande signee.",
     statusSubject: "Incident resolu sur eu-west",
@@ -255,6 +305,27 @@ export function t(key: MessageKey, params: Record<string, string | number> = {})
     value = value.replaceAll(`{${name}}`, String(replacement));
   }
   return value;
+}
+
+export function currentLocale(): Locale {
+  return locale;
+}
+
+export function setLocale(nextLocale: Locale): void {
+  locale = nextLocale;
+  try {
+    localStorage.setItem("realtime-mail.locale", nextLocale);
+  } catch {
+    // Locale persistence is optional in embedded clients.
+  }
+}
+
+function loadLocale(): Locale {
+  try {
+    return localStorage.getItem("realtime-mail.locale") === "fr" ? "fr" : "en";
+  } catch {
+    return "en";
+  }
 }
 
 export function createManifests() {
@@ -349,7 +420,7 @@ export function createSeedMessages() {
           <p>${t("invoiceBody")}</p>
           <dl>
             <div><dt>${t("total")}</dt><dd>184,90 EUR</dd></div>
-            <div><dt>${t("dueDate")}</dt><dd>18 juin 2026</dd></div>
+            <div><dt>${t("dueDate")}</dt><dd>${t("dueDateValue")}</dd></div>
           </dl>
           <button id="pay">${t("payButton")}</button>
           <p id="result" class="result"></p>

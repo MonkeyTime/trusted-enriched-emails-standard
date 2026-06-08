@@ -25,6 +25,8 @@ assert(!store.isSubscribed("billing.acme.tld", "invoice-events"), "revocation re
 
 store.trustDomain("billing.acme.tld");
 store.subscribe("billing.acme.tld", "invoice-events");
+store.dismissMessage("message-dismissed");
+store.supersedeMessage("message-superseded");
 store.deleteMessage("message-001");
 const message = {
   id: "message-001",
@@ -38,11 +40,15 @@ const message = {
   receivedAt: new Date("2026-06-08T08:00:00.000Z")
 };
 assert(StatePolicy.evaluateMessageState(message, store.messageSnapshot(new Date("2026-06-08T08:01:00.000Z"))) === "deleted", "deleted message state");
+assert(StatePolicy.evaluateMessageState({ ...message, id: "message-dismissed" }, store.messageSnapshot(new Date("2026-06-08T08:01:00.000Z"))) === "dismissed", "dismissed message state");
+assert(StatePolicy.evaluateMessageState({ ...message, id: "message-superseded" }, store.messageSnapshot(new Date("2026-06-08T08:01:00.000Z"))) === "superseded", "superseded message state");
 
 const reloaded = new ClientStateStore(storage);
 assert(StatePolicy.evaluateDomainState("billing.acme.tld", reloaded.domainSnapshot()) === "trusted", "trusted state persists");
 assert(reloaded.isSubscribed("billing.acme.tld", "invoice-events"), "subscription persists");
 assert(StatePolicy.evaluateMessageState(message, reloaded.messageSnapshot(new Date("2026-06-08T08:01:00.000Z"))) === "deleted", "deleted message persists");
+assert(StatePolicy.evaluateMessageState({ ...message, id: "message-dismissed" }, reloaded.messageSnapshot(new Date("2026-06-08T08:01:00.000Z"))) === "dismissed", "dismissed message persists");
+assert(StatePolicy.evaluateMessageState({ ...message, id: "message-superseded" }, reloaded.messageSnapshot(new Date("2026-06-08T08:01:00.000Z"))) === "superseded", "superseded message persists");
 
 console.log("PASS web client persistent state store");
 

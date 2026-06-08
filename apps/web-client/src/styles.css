@@ -245,6 +245,36 @@ p {
   width: 36px;
 }
 
+.language-select {
+  align-items: center;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  min-height: 34px;
+  padding: 0 9px;
+}
+
+.language-select span {
+  color: var(--muted);
+}
+
+.language-select select {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  font: inherit;
+  font-weight: 800;
+  min-height: 26px;
+  padding: 0 6px;
+}
+
 .panel {
   margin-top: 18px;
 }
@@ -589,6 +619,39 @@ p {
   padding: 10px;
 }
 
+.security-panel {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 14px;
+}
+
+.security-panel h2 {
+  margin-bottom: 0;
+}
+
+.security-panel p {
+  align-items: start;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  font-size: 12px;
+  gap: 6px;
+  grid-template-columns: minmax(92px, 0.8fr) minmax(0, 1.2fr);
+  line-height: 1.35;
+  padding: 9px;
+}
+
+.security-panel strong {
+  color: var(--muted);
+}
+
+.security-panel span {
+  overflow-wrap: anywhere;
+}
+
 .sidebar-compact .sidebar-inner {
   padding: 14px;
   width: 72px;
@@ -609,6 +672,7 @@ p {
 .sidebar-compact .panel h2,
 .sidebar-compact .optional-panel,
 .sidebar-compact .mode-switch,
+.sidebar-compact .language-select,
 .sidebar-compact .domain-head > div:not(.domain-icon),
 .sidebar-compact .domain-head .switch,
 .sidebar-compact .proof,
@@ -630,6 +694,8 @@ p {
 .sidebar-compact .sidebar:focus-within .optional-panel,
 .sidebar-compact .sidebar:hover .mode-switch,
 .sidebar-compact .sidebar:focus-within .mode-switch,
+.sidebar-compact .sidebar:hover .language-select,
+.sidebar-compact .sidebar:focus-within .language-select,
 .sidebar-compact .sidebar:hover .domain-head > div:not(.domain-icon),
 .sidebar-compact .sidebar:focus-within .domain-head > div:not(.domain-icon),
 .sidebar-compact .sidebar:hover .domain-head .switch,
@@ -646,6 +712,11 @@ p {
 .sidebar-compact .sidebar:hover .mode-switch,
 .sidebar-compact .sidebar:focus-within .mode-switch {
   display: grid;
+}
+
+.sidebar-compact .sidebar:hover .language-select,
+.sidebar-compact .sidebar:focus-within .language-select {
+  display: flex;
 }
 
 .sidebar-compact .sidebar:hover .optional-panel,
@@ -728,6 +799,7 @@ p {
   .sidebar-compact .panel h2,
   .sidebar-compact .optional-panel,
   .sidebar-compact .mode-switch,
+  .sidebar-compact .language-select,
   .sidebar-compact .domain-head > div:not(.domain-icon),
   .sidebar-compact .domain-head .switch,
   .sidebar-compact .proof,

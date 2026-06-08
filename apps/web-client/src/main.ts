@@ -3,6 +3,8 @@ import {
   createManifests,
   createSeedMessages,
   createTraditionalAccounts,
+  currentLocale,
+  setLocale,
   t
 } from "./i18n";
 import { ClientStateStore, channelKey } from "./client-state-store";
@@ -18,6 +20,8 @@ import {
   type RealtimeMailManifest,
   type RealtimeMailMessage,
   type HostMediatedPaymentRequest,
+  type MessageLifecycleState,
+  type TrustedDomainState,
   type TrustCapability
 } from "@realtimemail/sdk";
 import "./styles.css";
@@ -97,12 +101,18 @@ const processedPaymentInvoiceIds = new Set<string>();
 const layoutState = loadLayoutState();
 let lastSandboxPointerAt = 0;
 let gatewayEvents: EventSource | undefined;
+let gatewayReconnectTimer: number | undefined;
 
 const state = {
   messages: [...seedMessages],
   selectedMessageId: "m-001",
-  gatewayStatus: "disconnected" as "disconnected" | "connecting" | "connected",
+  gatewayStatus: "disconnected" as "disconnected" | "connecting" | "connected" | "reconnecting",
   gatewayManifest: undefined as RealtimeMailManifest | undefined,
+  gatewayDiagnostics: {
+    lastError: t("none"),
+    reconnectAttempts: 0,
+    lastEventAt: undefined as Date | undefined
+  },
   eventLog: [
     t("eventClientStarted"),
     t("eventManifestsLoaded"),
@@ -272,7 +282,12 @@ async function connectGateway() {
   if (state.gatewayStatus === "connected" || state.gatewayStatus === "connecting") {
     return;
   }
+  if (gatewayReconnectTimer !== undefined) {
+    window.clearTimeout(gatewayReconnectTimer);
+    gatewayReconnectTimer = undefined;
+  }
   state.gatewayStatus = "connecting";
+  state.gatewayDiagnostics.lastError = t("none");
   state.eventLog.unshift(t("gatewayStatus") + ": " + t("gatewayConnecting"));
   render();
 
@@ -290,22 +305,43 @@ async function connectGateway() {
     gatewayEvents = new EventSource(eventsUrl);
     gatewayEvents.addEventListener("ready", () => {
       state.gatewayStatus = "connected";
+      state.gatewayDiagnostics.lastEventAt = new Date();
       state.eventLog.unshift(t("gatewayConnectedEvent", { route: gatewayRoute }));
       render();
     });
     gatewayEvents.addEventListener("message", (event) => {
+      state.gatewayDiagnostics.lastEventAt = new Date();
       void receiveGatewayMessage(JSON.parse(event.data));
     });
     gatewayEvents.addEventListener("error", () => {
-      state.gatewayStatus = "disconnected";
-      state.eventLog.unshift(t("gatewayError", { error: "sse" }));
-      render();
+      handleGatewayError("sse");
     });
   } catch (error) {
-    state.gatewayStatus = "disconnected";
-    state.eventLog.unshift(t("gatewayError", { error: error instanceof Error ? error.message : "unknown" }));
-    render();
+    handleGatewayError(error instanceof Error ? error.message : "unknown");
   }
+}
+
+function handleGatewayError(error: string) {
+  gatewayEvents?.close();
+  gatewayEvents = undefined;
+  state.gatewayStatus = "disconnected";
+  state.gatewayDiagnostics.lastError = error;
+  state.eventLog.unshift(t("gatewayError", { error }));
+  scheduleGatewayReconnect();
+  render();
+}
+
+function scheduleGatewayReconnect() {
+  if (!state.gatewayManifest || gatewayReconnectTimer !== undefined) {
+    return;
+  }
+  state.gatewayStatus = "reconnecting";
+  state.gatewayDiagnostics.reconnectAttempts += 1;
+  state.eventLog.unshift(t("gatewayReconnecting", { count: state.gatewayDiagnostics.reconnectAttempts }));
+  gatewayReconnectTimer = window.setTimeout(() => {
+    gatewayReconnectTimer = undefined;
+    void connectGateway();
+  }, 2000);
 }
 
 async function receiveGatewayMessage(payload: unknown) {
@@ -498,6 +534,13 @@ function render() {
               ${layoutState.sidebarCompact ? ">" : "<"}
             </button>
           </div>
+          <label class="language-select">
+            <span>${t("language")}</span>
+            <select data-action="change-locale">
+              <option value="en" ${currentLocale() === "en" ? "selected" : ""}>EN</option>
+              <option value="fr" ${currentLocale() === "fr" ? "selected" : ""}>FR</option>
+            </select>
+          </label>
           <section class="panel">
             <h2>${t("domains")}</h2>
             <div class="domains">
@@ -553,6 +596,8 @@ function render() {
         <div class="audit-list">
           ${state.eventLog.slice(0, 9).map((item) => `<p>${escapeHtml(item)}</p>`).join("")}
         </div>
+        ${active ? securityDetailsView(active) : ""}
+        ${gatewayDiagnosticsView()}
       </aside>
     </main>
   `;
@@ -569,6 +614,8 @@ function readerView(message: MailMessage) {
       </div>
       <div class="reader-actions">
         <span class="${canRender(message) ? "pill ok" : "pill danger"}">${canRender(message) ? renderLabel(message) : t("blocked")}</span>
+        <button data-action="dismiss-message" data-message="${escapeHtml(message.id)}">${t("dismissMessage")}</button>
+        <button data-action="supersede-message" data-message="${escapeHtml(message.id)}">${t("supersedeMessage")}</button>
         <button data-action="delete-message" data-message="${escapeHtml(message.id)}">${t("deleteMessage")}</button>
       </div>
     </header>
@@ -586,6 +633,10 @@ function emptyReaderView() {
 }
 
 function renderLabel(message: MailMessage) {
+  const state = messageLifecycleState(message);
+  if (state !== "visible") {
+    return lifecycleLabel(state);
+  }
   if (message.source === "traditional") {
     return t("emailHtml");
   }
@@ -599,6 +650,56 @@ function renderLabel(message: MailMessage) {
     return t("htmlCssJs");
   }
   return t("htmlCss");
+}
+
+function securityDetailsView(message: MailMessage) {
+  const domainState = StatePolicy.evaluateDomainState(message.domain, stateStore.domainSnapshot());
+  const lifecycle = messageLifecycleState(message);
+  const expiresAt = message.expiresAt ? message.expiresAt.toISOString() : t("none");
+  const paymentStatus = message.capabilities.includes("payment-request:user-gesture")
+    ? `${t("allowed")} / 2026-0608 / 184.90 EUR`
+    : t("none");
+  return `
+    <section class="security-panel">
+      <h2>${t("security")}</h2>
+      ${detailRow(t("domainState"), domainStateLabel(domainState))}
+      ${detailRow(t("messageState"), lifecycleLabel(lifecycle))}
+      ${detailRow(t("signature"), message.signatureStatus ?? t("none"))}
+      ${detailRow(t("capabilities"), message.capabilities.join(", ") || t("none"))}
+      ${detailRow(t("expiry"), expiresAt)}
+      ${detailRow(t("sandbox"), canRunScripts(message) ? t("allowed") : t("denied"))}
+      ${detailRow(t("cspNetwork"), t("denied"))}
+      ${detailRow(t("paymentPayload"), paymentStatus)}
+    </section>
+  `;
+}
+
+function gatewayDiagnosticsView() {
+  return `
+    <section class="security-panel">
+      <h2>${t("gatewayDiagnostics")}</h2>
+      ${detailRow(t("gatewayStatus"), gatewayStatusLabel())}
+      ${detailRow(t("lastError"), state.gatewayDiagnostics.lastError)}
+      ${detailRow(t("reconnectAttempts"), String(state.gatewayDiagnostics.reconnectAttempts))}
+      ${detailRow(t("lastEvent"), state.gatewayDiagnostics.lastEventAt?.toLocaleTimeString() ?? t("never"))}
+    </section>
+  `;
+}
+
+function detailRow(label: string, value: string) {
+  return `<p><strong>${escapeHtml(label)}</strong><span>${escapeHtml(value)}</span></p>`;
+}
+
+function messageLifecycleState(message: MailMessage): MessageLifecycleState {
+  return StatePolicy.evaluateMessageState(toPolicyMessage(message), stateStore.messageSnapshot());
+}
+
+function lifecycleLabel(state: MessageLifecycleState) {
+  return state;
+}
+
+function domainStateLabel(state: TrustedDomainState) {
+  return state;
 }
 
 function accountView(account: TraditionalMailAccount) {
@@ -752,6 +853,22 @@ function bindEvents() {
     render();
   });
 
+  document.querySelector<HTMLElement>("[data-action='dismiss-message']")?.addEventListener("click", () => {
+    const message = state.messages.find((item) => item.id === state.selectedMessageId);
+    if (!message) return;
+    stateStore.dismissMessage(message.id);
+    state.eventLog.unshift(t("eventMessageDismissed", { id: message.id }));
+    render();
+  });
+
+  document.querySelector<HTMLElement>("[data-action='supersede-message']")?.addEventListener("click", () => {
+    const message = state.messages.find((item) => item.id === state.selectedMessageId);
+    if (!message) return;
+    stateStore.supersedeMessage(message.id);
+    state.eventLog.unshift(t("eventMessageSuperseded", { id: message.id }));
+    render();
+  });
+
   document.querySelector<HTMLElement>("[data-action='simulate']")?.addEventListener("click", () => {
     const subscriptions = stateStore.snapshot().subscribedChannels;
     const first = subscriptions[0];
@@ -780,6 +897,12 @@ function bindEvents() {
     layoutState.theme = (event.currentTarget as HTMLInputElement).checked ? "night" : "day";
     saveLayoutState();
     applyTheme();
+  });
+
+  document.querySelector<HTMLSelectElement>("[data-action='change-locale']")?.addEventListener("change", (event) => {
+    const value = (event.currentTarget as HTMLSelectElement).value;
+    setLocale(value === "fr" ? "fr" : "en");
+    render();
   });
 
   document.querySelector<HTMLElement>("[data-action='toggle-sidebar']")?.addEventListener("click", () => {
@@ -915,6 +1038,9 @@ function gatewayStatusLabel() {
   }
   if (state.gatewayStatus === "connecting") {
     return t("gatewayConnecting");
+  }
+  if (state.gatewayStatus === "reconnecting") {
+    return t("gatewayReconnecting", { count: state.gatewayDiagnostics.reconnectAttempts });
   }
   return t("gatewayDisconnected");
 }

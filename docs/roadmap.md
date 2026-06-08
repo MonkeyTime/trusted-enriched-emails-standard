@@ -47,6 +47,10 @@ This roadmap tracks the standard, SDKs, reference gateway, and web client togeth
 - Resizable trusted-domain, inbox, reader, and audit columns.
 - Persistent trusted domain, subscription, deleted message, and layout state.
 - English default locale with French translations kept in `apps/web-client/src/i18n.ts`.
+- Security details panel per realtime message with trust, signature, capability, expiry, sandbox, CSP, and payment status.
+- Explicit dismissed and superseded message controls.
+- Language selector with English as the default locale.
+- Gateway diagnostics with last error, reconnect attempts, last event time, and reconnect scheduling.
 
 ### Security Hardening
 
@@ -79,10 +83,6 @@ This roadmap tracks the standard, SDKs, reference gateway, and web client togeth
 
 ### Reference Client
 
-- Add a security details panel per realtime message showing domain trust, signature status, capabilities, expiry, sandbox policy, and payment payload verification.
-- Add explicit UI for dismissed and superseded messages.
-- Add a language selector while keeping English as the default.
-- Add better gateway connection diagnostics and reconnect behavior.
 - Add Playwright coverage for real iframe click-to-action flows and synthetic `postMessage` rejection.
 
 ### Gateway Reference
