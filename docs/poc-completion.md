@@ -5,7 +5,7 @@ This document defines the intended stopping point for the current proof of conce
 The POC is considered complete when it proves the full Realtime Mail trust loop:
 
 1. A trusted domain publishes a manifest.
-2. A gateway builds and signs realtime messages.
+2. A gateway builds and signs enriched realtime messages.
 3. A client subscribes to a realtime route through a gateway, not directly to the broker.
 4. The client validates the manifest, signature, domain state, message state, capabilities, expiry, and sandbox policy before rendering.
 5. Interactive HTML, CSS, SVG, and JavaScript run only inside a sandbox.
@@ -15,7 +15,7 @@ The POC is considered complete when it proves the full Realtime Mail trust loop:
 
 ## Completed POC Slice
 
-- Web client POC with traditional and realtime messages in one inbox.
+- Web client POC with traditional and enriched messages in one inbox.
 - Trusted domain state model: `trusted`, `muted`, and `revoked`.
 - Message lifecycle model: `visible`, `dismissed`, `deleted`, `superseded`, and `expired`.
 - Signed gateway messages over SSE.

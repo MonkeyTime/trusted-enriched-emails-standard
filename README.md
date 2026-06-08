@@ -1,10 +1,12 @@
 # Realtime Mail Standard
 
-Realtime Mail is an open proposal for trusted, interactive, realtime email experiences.
+Realtime Mail is an open proposal for trusted enriched email: signed, sandboxed, interactive messages delivered through traditional mail or realtime channels.
+
+The product goal is not simply faster delivery. It is richer mail that can safely contain HTML, CSS, SVG, sandboxed JavaScript, mini-apps, payment requests, approvals, status panels, and other host-mediated actions without giving arbitrary email content direct access to the mailbox or user credentials.
 
 The repository is structured as a standard plus SDKs:
 
-- [Web client POC](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/apps/web-client): sandboxed web client POC with traditional mail and realtime mail in one inbox.
+- [Web client POC](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/apps/web-client): sandboxed web client POC with traditional mail and trusted enriched mail in one inbox.
 - [TypeScript SDK](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/packages/typescript)
 - [Java SDK](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/packages/java)
 - [C# SDK](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/packages/csharp)
@@ -83,13 +85,13 @@ npm.cmd run gateway:start
 npm.cmd run dev
 ```
 
-Open the web client, use the gateway action buttons to publish a signed event, mini-game, or payment request.
+Open the web client, use the gateway action buttons to publish a signed enriched event, mini-game, or payment request.
 
 Expected result:
 
 - the client loads the gateway manifest;
 - the client subscribes over SSE;
-- the gateway signs a realtime message;
+- the gateway signs an enriched realtime message;
 - the client verifies the Ed25519 signature;
 - the message is displayed with a verified signature label.
 - sandboxed JavaScript can run only for signed trusted messages;
@@ -103,7 +105,7 @@ Traditional email remains supported. A client can additionally discover a realti
 https://domain.tld/.well-known/realtime-mail.json
 ```
 
-If the domain is trusted, the client can subscribe to declared channels through an authenticated gateway. Rich content is rendered in a sandbox with explicit capabilities.
+If the domain is trusted, the client can subscribe to declared channels through an authenticated gateway. Enriched content is rendered in a sandbox with explicit capabilities.
 
 ## Security-first SDK surface
 

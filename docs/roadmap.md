@@ -96,7 +96,7 @@ This roadmap tracks the standard, SDKs, reference gateway, and web client togeth
 - Provider interfaces for IMAP and SMTP.
 - OAuth provider abstraction for traditional mail accounts.
 - Local backend bridge for browser clients.
-- Unified message store spanning traditional and realtime messages.
+- Unified message store spanning traditional and enriched messages.
 - Thunderbird extension proof of integration.
 - Account isolation and permission model for traditional mail credentials.
 

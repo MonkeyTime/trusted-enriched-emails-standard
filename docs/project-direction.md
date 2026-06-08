@@ -1,21 +1,23 @@
 # Project Direction
 
-Realtime Mail should become an open standard and developer platform for trusted interactive mail.
+Realtime Mail should become an open standard and developer platform for trusted enriched email.
 
-The project is not trying to replace traditional email. It adds a realtime, signed, capability-based layer beside existing IMAP, SMTP, provider APIs, and local mail stores.
+The project is not trying to replace traditional email. It adds a signed, capability-based enriched message layer beside existing IMAP, SMTP, provider APIs, local mail stores, and optional realtime transports.
 
 ## Product Thesis
 
-Email clients are conservative because messages are untrusted documents. Realtime Mail changes the trust model by moving interactivity behind explicit domain trust, signed messages, sandboxed rendering, and host-mediated actions.
+Email clients are conservative because messages are untrusted documents. Realtime Mail changes the trust model by moving enriched interactivity behind explicit domain trust, signed messages, sandboxed rendering, and host-mediated actions.
 
 The result should feel like email when the sender is ordinary, and like a safe mini-application when the sender is a trusted domain.
+
+Realtime delivery is a technical capability. The product category should be trusted enriched email: messages that can be interactive, visual, stateful, and action-oriented while keeping the host client in charge.
 
 ## Must-Have Outcome
 
 The client becomes useful when it can do all of these well:
 
 - read traditional mail accounts;
-- subscribe to trusted realtime domain channels;
+- subscribe to trusted enriched domain channels;
 - render signed HTML, CSS, SVG, and sandboxed JavaScript;
 - explain why a message is trusted, muted, revoked, blocked, deleted, or expired;
 - allow safe host-mediated actions such as opening a same-domain URL or requesting a payment flow;
@@ -24,7 +26,7 @@ The client becomes useful when it can do all of these well:
 
 ## Adoption Strategy
 
-Realtime Mail cannot depend on every website changing behavior at once. Adoption should start where the value is unusually obvious:
+Trusted enriched email cannot depend on every website changing behavior at once. Adoption should start where the value is unusually obvious:
 
 - invoices and payment requests;
 - incident and status feeds;
@@ -66,7 +68,7 @@ Thunderbird and browser-based clients are the first realistic integration target
 
 These rules define the product:
 
-- realtime messages are untrusted until manifest, signature, domain trust, state policy, and capability checks pass;
+- enriched messages are untrusted until manifest, signature, domain trust, state policy, and capability checks pass;
 - scripts run only in sandboxed message contexts;
 - sandboxed content never receives mailbox data, account tokens, payment credentials, or host cookies;
 - privileged actions always go through the host action broker;

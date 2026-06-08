@@ -99,7 +99,7 @@ Checks host-mediated actions against the source message, manifest domain, local 
 
 - `build(input): RealtimeMailMessage`
 
-Creates unsigned realtime messages for a manifest channel.
+Creates unsigned enriched realtime messages for a manifest channel.
 
 ### `MessageSigner`
 

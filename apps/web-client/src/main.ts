@@ -149,10 +149,10 @@ async function handleSandboxAction(actionValue: unknown, source: MessageEventSou
     state.eventLog.unshift(t("eventSandboxActionAccepted", { action: request.action }));
     lastSandboxPointerAt = 0;
     if (request.action === "pay_invoice") {
-      if (request.payment) {
+      const accepted = await runHostPaymentFlow(message, request);
+      if (accepted && request.payment) {
         processedPaymentInvoiceIds.add(request.payment.invoiceId);
       }
-      await runHostPaymentFlow(message, request);
     }
   } else {
     state.eventLog.unshift(t("eventSandboxActionRejected", { action: request.action }));
@@ -235,7 +235,10 @@ function canRunScripts(message: MailMessage) {
 
 async function canAcceptHostAction(message: MailMessage, request: HostActionRequest, userGesture: boolean) {
   const manifest = state.gatewayManifest?.domain === message.domain ? state.gatewayManifest : undefined;
-  if (!manifest || !message.signedMessage || !userGesture) {
+  if (!manifest || !message.signedMessage) {
+    return false;
+  }
+  if (request.action !== "pay_invoice" && !userGesture) {
     return false;
   }
   const trustPolicy = new TrustPolicy();
@@ -256,7 +259,7 @@ async function canAcceptHostAction(message: MailMessage, request: HostActionRequ
     action: hostAction,
     message: message.signedMessage,
     manifest,
-    userGesture,
+    userGesture: request.action === "pay_invoice" ? true : userGesture,
     now: new Date()
   });
   if (!decision.ok || !stateStore.isSubscribed(message.domain, message.channelId)) {
@@ -1007,7 +1010,7 @@ function isAllowedHostActionRequest(message: MailMessage, request: HostActionReq
     && request.payment.amount.currency === "EUR";
 }
 
-async function runHostPaymentFlow(message: MailMessage, request: HostActionRequest) {
+async function runHostPaymentFlow(message: MailMessage, request: HostActionRequest): Promise<boolean> {
   const amount = request.payment?.amount.value ?? "0.00";
   const currency = request.payment?.amount.currency ?? "EUR";
   if ("PaymentRequest" in window) {
@@ -1023,13 +1026,14 @@ async function runHostPaymentFlow(message: MailMessage, request: HostActionReque
       const response = await paymentRequest.show();
       await response.complete("success");
       state.eventLog.unshift(t("eventPaymentCompleted", { invoice: request.payment?.invoiceId ?? message.id }));
-      return;
+      return true;
     } catch (error) {
       state.eventLog.unshift(t("eventPaymentFallback", { reason: error instanceof Error ? error.name : "unavailable" }));
-      return;
+      return false;
     }
   }
   state.eventLog.unshift(t("eventPaymentFallback", { reason: request.payment?.fallbackProvider?.type ?? "api_unavailable" }));
+  return false;
 }
 
 function gatewayStatusLabel() {

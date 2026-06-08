@@ -1,6 +1,8 @@
 # Realtime Mail Standard
 
-Realtime Mail is an open draft standard for trusted interactive mail. It combines traditional mail compatibility with signed realtime channels, sandboxed rendering, explicit capabilities, and host-mediated actions.
+Realtime Mail is an open draft standard for trusted enriched email. It combines traditional mail compatibility with signed realtime channels, sandboxed rendering, explicit capabilities, and host-mediated actions.
+
+The value proposition is richer mail, not only faster mail: safe interactive invoices, approvals, mini-apps, SVG-heavy messages, status panels, and payment requests that remain under the host client's control.
 
 ## Start Here
 

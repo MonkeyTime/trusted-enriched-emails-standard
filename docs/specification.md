@@ -5,7 +5,7 @@ Version: `0.1-draft`
 ## Goals
 
 - Keep compatibility with traditional email clients and accounts.
-- Add a trusted realtime layer for domains that publish a manifest.
+- Add a trusted enriched email layer for domains that publish a manifest.
 - Allow rich HTML, CSS, SVG, and sandboxed JavaScript only through explicit capabilities.
 - Make messages portable across clients through open SDKs and a stable manifest format.
 

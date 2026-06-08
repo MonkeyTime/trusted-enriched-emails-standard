@@ -1,6 +1,6 @@
 # Host-Mediated Payment Request Profile
 
-This profile standardizes payment requests sent from sandboxed realtime messages to the host mail client.
+This profile standardizes payment requests sent from sandboxed enriched realtime messages to the host mail client.
 
 The sandboxed message never initiates payment directly. It may only request a host-mediated action with a payment payload. The host client owns confirmation, Payment Request API usage, provider checkout, QR display, audit logging, and result handling.
 

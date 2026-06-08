@@ -4,7 +4,7 @@ Realtime Mail treats every message as untrusted until the client can prove other
 
 ## Trust Boundary
 
-Traditional mail and realtime mail share an inbox, but not a privilege model.
+Traditional mail and enriched mail share an inbox, but not a privilege model.
 
 - Traditional mail may render sanitized HTML/CSS only.
 - Realtime mail may request richer capabilities only when the domain is trusted, the manifest is valid, and the message signature verifies.
@@ -12,7 +12,7 @@ Traditional mail and realtime mail share an inbox, but not a privilege model.
 
 ## Required Validation Pipeline
 
-Clients should process realtime messages in this order:
+Clients should process enriched realtime messages in this order:
 
 1. Resolve `/.well-known/realtime-mail.json`.
 2. Validate the manifest against `spec/schemas/manifest.schema.json`.
@@ -81,7 +81,7 @@ The host client owns the payment flow:
 
 ## Replay Controls
 
-Messages may include `expiresAt`. When present, it is part of the canonical signed payload. Clients should treat expired realtime messages as non-interactive even if they remain visible in the inbox.
+Messages may include `expiresAt`. When present, it is part of the canonical signed payload. Clients should treat expired enriched realtime messages as non-interactive even if they remain visible in the inbox.
 
 ## Revocation
 

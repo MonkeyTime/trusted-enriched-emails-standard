@@ -1,10 +1,10 @@
 # Gateway SDK Profile
 
-The Gateway SDK profile is for trusted domains that publish realtime mail.
+The Gateway SDK profile is for trusted domains that publish enriched realtime mail.
 
 It shares the Core SDK validation and signing primitives with mail clients, but its responsibilities are different:
 
-- build conformant realtime messages;
+- build conformant enriched realtime messages;
 - sign messages before publishing;
 - authorize user routes against manifest channels;
 - validate host-mediated actions returned by clients;
@@ -14,7 +14,7 @@ It shares the Core SDK validation and signing primitives with mail clients, but 
 
 ### `RealtimeMessageBuilder`
 
-Builds unsigned realtime messages from a validated manifest channel.
+Builds unsigned enriched realtime messages from a validated manifest channel.
 
 Responsibilities:
 

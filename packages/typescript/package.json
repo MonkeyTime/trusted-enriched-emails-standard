@@ -1,7 +1,7 @@
 {
   "name": "@realtimemail/sdk",
   "version": "0.1.0",
-  "description": "TypeScript SDK for the Realtime Mail draft standard",
+  "description": "TypeScript SDK for trusted enriched email over the Realtime Mail draft standard",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

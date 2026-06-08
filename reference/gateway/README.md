@@ -1,6 +1,6 @@
 # Reference Gateway
 
-This is a minimal Node.js reference gateway for Realtime Mail.
+This is a minimal Node.js reference gateway for trusted enriched email over Realtime Mail channels.
 
 It exposes Server-Sent Events to clients and can publish through either an in-memory broker or RabbitMQ.
 
