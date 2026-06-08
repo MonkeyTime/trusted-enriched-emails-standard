@@ -4,19 +4,19 @@ Realtime Mail is an open proposal for trusted, interactive, realtime email exper
 
 The repository is structured as a standard plus SDKs:
 
-- `apps/web-client`: sandboxed web client POC with traditional mail and realtime mail in one inbox.
-- `packages/typescript`: TypeScript SDK.
-- `packages/java`: Java SDK.
-- `packages/csharp`: C# SDK.
-- `packages/python`: Python SDK.
-- `packages/go`: Go SDK.
-- `packages/rust`: Rust SDK.
-- `docs`: official specification and API reference.
-- `spec/schemas`: normative JSON Schemas.
-- `conformance`: shared valid and invalid fixtures for SDK compatibility.
-- `integrations/thunderbird`: client integration notes.
-- `examples`: manifests and message examples.
-- `reference/gateway`: SSE reference gateway with signed demo messages and optional RabbitMQ broker adapter.
+- [Web client POC](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/apps/web-client): sandboxed web client POC with traditional mail and realtime mail in one inbox.
+- [TypeScript SDK](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/packages/typescript)
+- [Java SDK](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/packages/java)
+- [C# SDK](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/packages/csharp)
+- [Python SDK](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/packages/python)
+- [Go SDK](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/packages/go)
+- [Rust SDK](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/packages/rust)
+- [Official documentation](https://monkeytime.github.io/realtime-mail-standard/)
+- [Normative JSON Schemas](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/spec/schemas)
+- [Conformance fixtures](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/conformance)
+- [Thunderbird integration notes](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/integrations/thunderbird)
+- [Examples](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/examples)
+- [Reference gateway](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/reference/gateway): SSE reference gateway with signed demo messages and optional RabbitMQ broker adapter.
 
 ## Run the web client
 
@@ -122,16 +122,24 @@ SDKs now include the POC security primitives:
 
 For the current milestone, the SDKs are the primary reusable output. The web client and gateway are reference implementations that prove the flow.
 
-See also:
+## Documentation
 
-- `docs/security-model.md`
-- `docs/gateway-sdk-profile.md`
-- `docs/project-direction.md`
-- `docs/payment-request-profile.md`
-- `docs/sdk-compatibility.md`
-- `docs/state-policy.md`
-- `docs/threat-model.md`
-- `docs/roadmap.md`
-- `docs/poc-completion.md`
-- `docs/sdk-release-checklist.md`
-- `docs/adr`
+- [Documentation home](https://monkeytime.github.io/realtime-mail-standard/)
+- [Developer quickstart](https://monkeytime.github.io/realtime-mail-standard/guides/developer-quickstart.html)
+- [Specification](https://monkeytime.github.io/realtime-mail-standard/specification.html)
+- [Security model](https://monkeytime.github.io/realtime-mail-standard/security-model.html)
+- [Threat model](https://monkeytime.github.io/realtime-mail-standard/threat-model.html)
+- [Gateway SDK profile](https://monkeytime.github.io/realtime-mail-standard/gateway-sdk-profile.html)
+- [Host-mediated payment request profile](https://monkeytime.github.io/realtime-mail-standard/payment-request-profile.html)
+- [State policy](https://monkeytime.github.io/realtime-mail-standard/state-policy.html)
+- [SDK compatibility matrix](https://monkeytime.github.io/realtime-mail-standard/sdk-compatibility.html)
+- [SDK release checklist](https://monkeytime.github.io/realtime-mail-standard/sdk-release-checklist.html)
+- [POC completion status](https://monkeytime.github.io/realtime-mail-standard/poc-completion.html)
+- [Roadmap](https://monkeytime.github.io/realtime-mail-standard/roadmap.html)
+- [Architecture decision records](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/docs/adr)
+
+## License
+
+This project is licensed under the [MIT License](https://github.com/MonkeyTime/realtime-mail-standard/blob/main/LICENSE).
+
+The software is provided "as is", without warranty of any kind, express or implied. See the license text for the full warranty and liability disclaimer.
