@@ -109,7 +109,7 @@ function landingPage(pages) {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Realtime Mail Standard</title>
-    <link rel="stylesheet" href="assets/site.css" />
+    <link rel="stylesheet" href="/realtime-mail-standard/assets/site.css" />
   </head>
   <body>
     <main class="home">
