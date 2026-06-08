@@ -294,12 +294,17 @@ blockquote {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 8px;
+  color: var(--text);
   display: grid;
   gap: 4px;
   margin-bottom: 10px;
   padding: 14px;
+  text-align: left;
+  width: 100%;
 }
 
+.demo-message:hover,
+.demo-message:focus-visible,
 .demo-message.active {
   border-color: var(--accent);
 }
@@ -326,6 +331,14 @@ blockquote {
 .demo-reader {
   background: var(--card);
   padding: 18px;
+}
+
+.demo-reader-view {
+  display: none;
+}
+
+.demo-reader-view.active {
+  display: block;
 }
 
 .demo-reader-head {
@@ -475,6 +488,52 @@ blockquote {
   left: 42%;
 }
 
+.demo-game-live {
+  min-height: 260px;
+}
+
+.demo-game-live canvas {
+  cursor: pointer;
+  display: block;
+  height: 100%;
+  min-height: 260px;
+  position: relative;
+  touch-action: manipulation;
+  width: 100%;
+  z-index: 1;
+}
+
+.demo-game-hud {
+  align-items: center;
+  background: color-mix(in srgb, var(--card) 94%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  gap: 8px;
+  left: 12px;
+  padding: 8px 10px;
+  position: absolute;
+  top: 12px;
+  z-index: 2;
+}
+
+.demo-game-hud strong {
+  background: transparent;
+  border: 0;
+  color: var(--accent);
+  font-size: 24px;
+  line-height: 1;
+  padding: 0;
+}
+
+.demo-host-result {
+  background: color-mix(in srgb, var(--accent) 8%, var(--card));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 14px 0 0;
+  padding: 10px 12px;
+}
+
 .demo-trust-panel {
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -482,6 +541,10 @@ blockquote {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   margin: 18px 0 26px;
   overflow: hidden;
+}
+
+.demo-trust-panel.compact {
+  margin-top: 0;
 }
 
 .demo-trust-panel > div {
