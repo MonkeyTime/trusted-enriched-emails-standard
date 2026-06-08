@@ -21,6 +21,16 @@ Required extensions:
 
 The PHP SDK uses class constants instead of PHP 8.1 enums so PHP 7.4 deployments can adopt it.
 
+## Optional DTOs
+
+- `RealtimeMailChannel::fromArray($value)`
+- `RealtimeMailManifest::fromArray($value)`
+- `RealtimeMailMessage::fromArray($value)`
+- `RealtimeMailAction::fromArray($value)`
+- `TraditionalMailAccount`
+
+Each DTO exposes `toArray()` for wire-compatible payloads. The validators remain array-first so existing PHP applications can adopt the SDK without a framework or serializer dependency.
+
 ## Validation
 
 - `ManifestValidator::validate($value)`
@@ -73,4 +83,4 @@ Checks payment payload, source sandbox match, expected invoice id, amount, curre
 
 - The first PHP SDK is array-based rather than DTO-based to stay PHP 7.4 friendly.
 - Ed25519 verification requires `ext-sodium`.
-- PHP is not installed in the current local CI environment; `npm.cmd run php:check` skips when the executable is unavailable.
+- `npm.cmd run php:check` runs PHP syntax checks and the shared conformance fixtures when PHP is available. It also detects `C:\php-7.4.x\php.exe` on Windows.

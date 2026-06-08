@@ -96,6 +96,265 @@ final class ValidationError extends \InvalidArgumentException
     }
 }
 
+final class RealtimeMailChannel
+{
+    public string $id;
+    public string $label;
+    public string $route;
+    /** @var string[] */
+    public array $capabilities;
+    public ?string $description;
+
+    public function __construct(string $id, string $label, string $route, array $capabilities, ?string $description = null)
+    {
+        $this->id = $id;
+        $this->label = $label;
+        $this->route = $route;
+        $this->capabilities = $capabilities;
+        $this->description = $description;
+    }
+
+    public static function fromArray(array $value): self
+    {
+        Validators::raiseIfInvalid(Validators::channelIssues($value, '$'));
+        return new self(
+            $value['id'],
+            $value['label'],
+            $value['route'],
+            $value['capabilities'],
+            $value['description'] ?? null
+        );
+    }
+
+    public function toArray(): array
+    {
+        return Validators::withoutNulls([
+            'id' => $this->id,
+            'label' => $this->label,
+            'route' => $this->route,
+            'description' => $this->description,
+            'capabilities' => $this->capabilities,
+        ]);
+    }
+}
+
+final class RealtimeMailManifest
+{
+    public string $protocol;
+    public string $version;
+    public string $domain;
+    public string $displayName;
+    /** @var string[] */
+    public array $publicKeys;
+    /** @var RealtimeMailChannel[] */
+    public array $channels;
+
+    public function __construct(string $protocol, string $version, string $domain, string $displayName, array $publicKeys, array $channels)
+    {
+        $this->protocol = $protocol;
+        $this->version = $version;
+        $this->domain = $domain;
+        $this->displayName = $displayName;
+        $this->publicKeys = $publicKeys;
+        $this->channels = $channels;
+    }
+
+    public static function fromArray(array $value): self
+    {
+        ManifestValidator::parse($value);
+        return new self(
+            $value['protocol'],
+            $value['version'],
+            $value['domain'],
+            $value['displayName'],
+            $value['publicKeys'],
+            array_map(static function (array $channel): RealtimeMailChannel {
+                return RealtimeMailChannel::fromArray($channel);
+            }, $value['channels'])
+        );
+    }
+
+    public function toArray(): array
+    {
+        return [
+            'protocol' => $this->protocol,
+            'version' => $this->version,
+            'domain' => $this->domain,
+            'displayName' => $this->displayName,
+            'publicKeys' => $this->publicKeys,
+            'channels' => array_map(static function (RealtimeMailChannel $channel): array {
+                return $channel->toArray();
+            }, $this->channels),
+        ];
+    }
+}
+
+final class RealtimeMailMessage
+{
+    public string $id;
+    public string $source;
+    public string $domain;
+    public ?string $channelId;
+    public string $from;
+    public string $subject;
+    public string $html;
+    public ?string $css;
+    public ?string $script;
+    /** @var string[] */
+    public array $capabilities;
+    public string $receivedAt;
+    public ?string $expiresAt;
+    public ?string $signature;
+
+    public function __construct(
+        string $id,
+        string $source,
+        string $domain,
+        string $from,
+        string $subject,
+        string $html,
+        array $capabilities,
+        string $receivedAt,
+        ?string $channelId = null,
+        ?string $css = null,
+        ?string $script = null,
+        ?string $expiresAt = null,
+        ?string $signature = null
+    ) {
+        $this->id = $id;
+        $this->source = $source;
+        $this->domain = $domain;
+        $this->from = $from;
+        $this->subject = $subject;
+        $this->html = $html;
+        $this->capabilities = $capabilities;
+        $this->receivedAt = $receivedAt;
+        $this->channelId = $channelId;
+        $this->css = $css;
+        $this->script = $script;
+        $this->expiresAt = $expiresAt;
+        $this->signature = $signature;
+    }
+
+    public static function fromArray(array $value): self
+    {
+        MessageValidator::parse($value);
+        return new self(
+            $value['id'],
+            $value['source'],
+            $value['domain'],
+            $value['from'],
+            $value['subject'],
+            $value['html'],
+            $value['capabilities'],
+            $value['receivedAt'],
+            $value['channelId'] ?? null,
+            $value['css'] ?? null,
+            $value['script'] ?? null,
+            $value['expiresAt'] ?? null,
+            $value['signature'] ?? null
+        );
+    }
+
+    public function toArray(): array
+    {
+        return Validators::withoutNulls([
+            'id' => $this->id,
+            'source' => $this->source,
+            'domain' => $this->domain,
+            'channelId' => $this->channelId,
+            'from' => $this->from,
+            'subject' => $this->subject,
+            'html' => $this->html,
+            'css' => $this->css,
+            'script' => $this->script,
+            'capabilities' => $this->capabilities,
+            'receivedAt' => $this->receivedAt,
+            'expiresAt' => $this->expiresAt,
+            'signature' => $this->signature,
+        ]);
+    }
+}
+
+final class RealtimeMailAction
+{
+    public string $id;
+    public string $messageId;
+    public string $domain;
+    public string $type;
+    public bool $requiresUserGesture;
+    public ?string $url;
+    /** @var mixed */
+    public $payload;
+
+    public function __construct(string $id, string $messageId, string $domain, string $type, bool $requiresUserGesture, ?string $url = null, $payload = null)
+    {
+        $this->id = $id;
+        $this->messageId = $messageId;
+        $this->domain = $domain;
+        $this->type = $type;
+        $this->requiresUserGesture = $requiresUserGesture;
+        $this->url = $url;
+        $this->payload = $payload;
+    }
+
+    public static function fromArray(array $value): self
+    {
+        ActionValidator::parse($value);
+        return new self(
+            $value['id'],
+            $value['messageId'],
+            $value['domain'],
+            $value['type'],
+            $value['requiresUserGesture'],
+            $value['url'] ?? null,
+            $value['payload'] ?? null
+        );
+    }
+
+    public function toArray(): array
+    {
+        return Validators::withoutNulls([
+            'id' => $this->id,
+            'messageId' => $this->messageId,
+            'domain' => $this->domain,
+            'type' => $this->type,
+            'requiresUserGesture' => $this->requiresUserGesture,
+            'url' => $this->url,
+            'payload' => $this->payload,
+        ]);
+    }
+}
+
+final class TraditionalMailAccount
+{
+    public string $id;
+    public string $email;
+    public string $provider;
+    public string $incomingHost;
+    public string $outgoingHost;
+
+    public function __construct(string $id, string $email, string $provider, string $incomingHost, string $outgoingHost)
+    {
+        $this->id = $id;
+        $this->email = $email;
+        $this->provider = $provider;
+        $this->incomingHost = $incomingHost;
+        $this->outgoingHost = $outgoingHost;
+    }
+
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'email' => $this->email,
+            'provider' => $this->provider,
+            'incomingHost' => $this->incomingHost,
+            'outgoingHost' => $this->outgoingHost,
+        ];
+    }
+}
+
 final class ManifestValidator
 {
     public static function validate($value): array
@@ -634,6 +893,27 @@ final class ActionReceiver
 
 final class Validators
 {
+    public static function raiseIfInvalid(array $issues): void
+    {
+        if ($issues) {
+            throw new ValidationError($issues);
+        }
+    }
+
+    public static function withoutNulls(array $value): array
+    {
+        return array_filter($value, static function ($item): bool {
+            return $item !== null;
+        });
+    }
+
+    public static function channelIssues($value, string $path): array
+    {
+        $issues = [];
+        self::channel($value, $path, $issues);
+        return $issues;
+    }
+
     public static function string($value, string $path, array &$issues, bool $allowEmpty = false): void
     {
         if (!is_string($value) || (!$allowEmpty && $value === '')) {
