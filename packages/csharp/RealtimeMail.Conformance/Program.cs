@@ -200,6 +200,15 @@ static bool VerifyGatewayProfile()
     if (broker.Authorize(action, message, manifest, true, DateTimeOffset.Parse("2026-06-08T08:16:00Z")).Ok) return false;
     if (!new RouteAuthorizer(manifest).Authorize("/rt/invoices/demo-user", "invoice-events", "demo-user").Ok) return false;
     if (new RouteAuthorizer(manifest).Authorize("/rt/admin/demo-user", "invoice-events", "demo-user").Ok) return false;
+    var unsafePlaceholderManifest = manifest with
+    {
+        Channels = new[]
+        {
+            new RealtimeMailChannel("invoice-events", "Invoices", "/rt/invoices/:accountId", null, new[] { TrustCapability.RenderHtml })
+        }
+    };
+    if (new RouteAuthorizer(unsafePlaceholderManifest).Authorize("/rt/invoices/other-user", "invoice-events", "demo-user").Ok) return false;
+    if (!Throws(() => new ManifestResolver().ManifestUri("billing.acme.tld@127.0.0.1"))) return false;
     if (!new ActionReceiver("billing.acme.tld").Receive(action).Ok) return false;
     var crossDomain = action with { Domain = "evil.example", Url = "https://evil.example/invoices/1" };
     if (new ActionReceiver("billing.acme.tld").Receive(crossDomain).Ok) return false;
@@ -233,6 +242,19 @@ static bool VerifyGatewayProfile()
 static string Base64Url(byte[] value)
 {
     return Convert.ToBase64String(value).Replace('+', '-').Replace('/', '_').TrimEnd('=');
+}
+
+static bool Throws(Action action)
+{
+    try
+    {
+        action();
+        return false;
+    }
+    catch
+    {
+        return true;
+    }
 }
 
 internal sealed record TestCase(string File, bool Manifest, bool Valid);

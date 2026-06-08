@@ -176,7 +176,7 @@ func routeMatches(pattern string, route string, userID string) bool {
 				return false
 			}
 		} else if strings.HasPrefix(patternPart, ":") {
-			continue
+			return false
 		} else if patternPart != routePart {
 			return false
 		}

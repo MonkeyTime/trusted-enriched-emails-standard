@@ -38,6 +38,18 @@ server.stderr.on("data", (chunk) => {
 
 try {
   await waitForHealth();
+  const rejectedOrigin = await fetch(`${gatewayUrl}/health`, {
+    headers: { Origin: "https://evil.example" }
+  });
+  assert(rejectedOrigin.status === 403, `cross-origin health request was not rejected: ${rejectedOrigin.status}`);
+  assert(!rejectedOrigin.headers.has("access-control-allow-origin"), "rejected origin received CORS allow header");
+
+  const allowedOrigin = await fetch(`${gatewayUrl}/health`, {
+    headers: { Origin: "http://127.0.0.1:5190" }
+  });
+  assert(allowedOrigin.ok, `local app origin was rejected: ${allowedOrigin.status}`);
+  assert(allowedOrigin.headers.get("access-control-allow-origin") === "http://127.0.0.1:5190", "local origin was not echoed in CORS header");
+
   const abort = new AbortController();
   const events = await fetch(`${gatewayUrl}/events?route=${encodeURIComponent(route)}`, {
     signal: abort.signal

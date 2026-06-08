@@ -36,14 +36,22 @@ const actionReceiver = new ActionReceiver(manifest.domain);
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? "/", `http://${request.headers.host}`);
+  if (!isAllowedBrowserOrigin(request)) {
+    sendJson(request, response, { ok: false, error: "origin_not_allowed" }, 403);
+    return;
+  }
+  if (request.method === "OPTIONS") {
+    sendJson(request, response, { ok: true });
+    return;
+  }
 
   if (request.method === "GET" && url.pathname === "/.well-known/realtime-mail.json") {
-    sendJson(response, manifest);
+    sendJson(request, response, manifest);
     return;
   }
 
   if (request.method === "GET" && url.pathname === "/health") {
-    sendJson(response, { ok: true, broker: broker.type, subscribers: broker.subscriberCount });
+    sendJson(request, response, { ok: true, broker: broker.type, subscribers: broker.subscriberCount });
     return;
   }
 
@@ -51,10 +59,10 @@ const server = createServer(async (request, response) => {
     const route = url.searchParams.get("route") ?? "/rt/invoices/demo-user";
     const authorized = routeAuthorizer.authorize({ route, channelId: "invoice-events", userId: "demo-user" });
     if (!authorized.ok) {
-      sendJson(response, { ok: false, error: authorized.reason }, 403);
+      sendJson(request, response, { ok: false, error: authorized.reason }, 403);
       return;
     }
-    await subscribeSse(route, response);
+    await subscribeSse(request, route, response);
     return;
   }
 
@@ -62,12 +70,12 @@ const server = createServer(async (request, response) => {
     const route = url.searchParams.get("route") ?? "/rt/invoices/demo-user";
     const authorized = routeAuthorizer.authorize({ route, channelId: "invoice-events", userId: "demo-user" });
     if (!authorized.ok) {
-      sendJson(response, { ok: false, error: authorized.reason }, 403);
+      sendJson(request, response, { ok: false, error: authorized.reason }, 403);
       return;
     }
     const message = await createSignedMessage(route);
     await broker.publish(route, message);
-    sendJson(response, { ok: true, route, message });
+    sendJson(request, response, { ok: true, route, message });
     return;
   }
 
@@ -75,12 +83,12 @@ const server = createServer(async (request, response) => {
     const route = url.searchParams.get("route") ?? "/rt/invoices/demo-user";
     const authorized = routeAuthorizer.authorize({ route, channelId: "invoice-events", userId: "demo-user" });
     if (!authorized.ok) {
-      sendJson(response, { ok: false, error: authorized.reason }, 403);
+      sendJson(request, response, { ok: false, error: authorized.reason }, 403);
       return;
     }
     const message = await createMiniGameMessage(route);
     await broker.publish(route, message);
-    sendJson(response, { ok: true, route, message });
+    sendJson(request, response, { ok: true, route, message });
     return;
   }
 
@@ -88,23 +96,23 @@ const server = createServer(async (request, response) => {
     const route = url.searchParams.get("route") ?? "/rt/invoices/demo-user";
     const authorized = routeAuthorizer.authorize({ route, channelId: "invoice-events", userId: "demo-user" });
     if (!authorized.ok) {
-      sendJson(response, { ok: false, error: authorized.reason }, 403);
+      sendJson(request, response, { ok: false, error: authorized.reason }, 403);
       return;
     }
     const message = await createPaymentMessage(route);
     await broker.publish(route, message);
-    sendJson(response, { ok: true, route, message });
+    sendJson(request, response, { ok: true, route, message });
     return;
   }
 
   if (request.method === "POST" && url.pathname === "/actions") {
     const action = await readJson(request);
     const result = actionReceiver.receive(action.action ?? action);
-    sendJson(response, result, result.ok ? 202 : 400);
+    sendJson(request, response, result, result.ok ? 202 : 400);
     return;
   }
 
-  sendJson(response, { error: "not_found" }, 404);
+  sendJson(request, response, { error: "not_found" }, 404);
 });
 
 server.listen(port, "127.0.0.1", () => {
@@ -113,12 +121,12 @@ server.listen(port, "127.0.0.1", () => {
   console.log(`Manifest public key: ${publicKey}`);
 });
 
-async function subscribeSse(route, response) {
+async function subscribeSse(request, route, response) {
   response.writeHead(200, {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",
     Connection: "keep-alive",
-    "Access-Control-Allow-Origin": "*"
+    ...corsHeaders(request)
   });
   const subscription = await broker.subscribe(route, (message) => {
     response.write(`event: message\ndata: ${JSON.stringify(message)}\n\n`);
@@ -290,10 +298,36 @@ async function readJson(request) {
   return JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
 }
 
-function sendJson(response, value, status = 200) {
+function sendJson(request, response, value, status = 200) {
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
-    "Access-Control-Allow-Origin": "*"
+    ...corsHeaders(request)
   });
   response.end(JSON.stringify(value, null, 2));
+}
+
+function isAllowedBrowserOrigin(request) {
+  const origin = request.headers.origin;
+  if (!origin) {
+    return true;
+  }
+  try {
+    const url = new URL(origin);
+    return url.protocol === "http:" && ["127.0.0.1", "localhost"].includes(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function corsHeaders(request) {
+  const origin = request.headers.origin;
+  if (!origin || !isAllowedBrowserOrigin(request)) {
+    return {};
+  }
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    Vary: "Origin"
+  };
 }

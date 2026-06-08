@@ -95,6 +95,7 @@ const signatureVerifier = new SignatureVerifier();
 const stateStore = new ClientStateStore(globalThis.localStorage);
 const processedPaymentInvoiceIds = new Set<string>();
 const layoutState = loadLayoutState();
+let lastSandboxPointerAt = 0;
 let gatewayEvents: EventSource | undefined;
 
 const state = {
@@ -120,13 +121,13 @@ const root = app;
 
 window.addEventListener("message", (event) => {
   if (event.data?.type === "trusted-mail-action") {
-    void handleSandboxAction(event.data, event.source);
+    void handleSandboxAction(event.data, event.source, hasFreshSandboxUserGesture());
   }
 });
 
 applyTheme();
 
-async function handleSandboxAction(actionValue: unknown, source: MessageEventSource | null) {
+async function handleSandboxAction(actionValue: unknown, source: MessageEventSource | null, userGesture: boolean) {
   const message = state.messages.find((item) => item.id === state.selectedMessageId);
   const request = parseHostActionRequest(actionValue);
   if (!isSelectedSandboxSource(source)) {
@@ -134,8 +135,9 @@ async function handleSandboxAction(actionValue: unknown, source: MessageEventSou
     render();
     return;
   }
-  if (message && await canAcceptHostAction(message, request)) {
+  if (message && await canAcceptHostAction(message, request, userGesture)) {
     state.eventLog.unshift(t("eventSandboxActionAccepted", { action: request.action }));
+    lastSandboxPointerAt = 0;
     if (request.action === "pay_invoice") {
       if (request.payment) {
         processedPaymentInvoiceIds.add(request.payment.invoiceId);
@@ -221,9 +223,9 @@ function canRunScripts(message: MailMessage) {
     && StatePolicy.evaluateDomainState(message.domain, stateStore.domainSnapshot()) === "trusted");
 }
 
-async function canAcceptHostAction(message: MailMessage, request: HostActionRequest) {
+async function canAcceptHostAction(message: MailMessage, request: HostActionRequest, userGesture: boolean) {
   const manifest = state.gatewayManifest?.domain === message.domain ? state.gatewayManifest : undefined;
-  if (!manifest || !message.signedMessage) {
+  if (!manifest || !message.signedMessage || !userGesture) {
     return false;
   }
   const trustPolicy = new TrustPolicy();
@@ -244,7 +246,7 @@ async function canAcceptHostAction(message: MailMessage, request: HostActionRequ
     action: hostAction,
     message: message.signedMessage,
     manifest,
-    userGesture: true,
+    userGesture,
     now: new Date()
   });
   if (!decision.ok || !stateStore.isSubscribed(message.domain, message.channelId)) {
@@ -309,7 +311,10 @@ async function connectGateway() {
 async function receiveGatewayMessage(payload: unknown) {
   const message = MessageValidator.parse(payload);
   const key = state.gatewayManifest?.publicKeys.find((publicKey) => publicKey.startsWith("ed25519:"));
-  const verified = Boolean(key && await signatureVerifier.verifyEd25519(message, key));
+  const verified = Boolean(state.gatewayManifest
+    && message.domain === state.gatewayManifest.domain
+    && key
+    && await signatureVerifier.verifyEd25519(message, key));
   const localMessage = mapGatewayMessage(message, verified);
   if (!StatePolicy.shouldDisplay(toPolicyMessage(localMessage), stateStore.domainSnapshot(), stateStore.messageSnapshot())) {
     state.eventLog.unshift(t("gatewayMessageSuppressed", { id: localMessage.id }));
@@ -398,7 +403,13 @@ function escapeHtml(value: string) {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 }
 
+function sandboxCsp(canRunScript: boolean) {
+  const scriptSrc = canRunScript ? "'unsafe-inline'" : "'none'";
+  return `default-src 'none'; img-src data: blob:; style-src 'unsafe-inline'; script-src ${scriptSrc}; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; media-src data: blob:`;
+}
+
 function messageDocument(message: MailMessage) {
+  const canRunMessageScripts = canRunScripts(message);
   if (!canRender(message)) {
     return `
       <!doctype html>
@@ -411,16 +422,18 @@ function messageDocument(message: MailMessage) {
     `;
   }
 
-  const script = canRunScripts(message) ? `<script>${message.js}<\/script>` : "";
-  const jsNotice = message.js && !canRunScripts(message)
+  const script = canRunMessageScripts ? `<script>${message.js}<\/script>` : "";
+  const jsNotice = message.js && !canRunMessageScripts
     ? `<p style="font-family:Inter,system-ui,sans-serif;margin:0;padding:10px 14px;background:#fff4cf;color:#5a4200;border-bottom:1px solid #eed98f">${t("scriptRemoved")}</p>`
     : "";
+  const csp = sandboxCsp(canRunMessageScripts);
 
   return `
     <!doctype html>
     <html>
       <head>
         <meta charset="utf-8" />
+        <meta http-equiv="Content-Security-Policy" content="${csp}" />
         <style>${message.css}</style>
       </head>
       <body>
@@ -551,15 +564,15 @@ function readerView(message: MailMessage) {
   return `
     <header class="reader-head">
       <div>
-        <p>${message.domain}</p>
-        <h2>${message.subject}</h2>
+        <p>${escapeHtml(message.domain)}</p>
+        <h2>${escapeHtml(message.subject)}</h2>
       </div>
       <div class="reader-actions">
         <span class="${canRender(message) ? "pill ok" : "pill danger"}">${canRender(message) ? renderLabel(message) : t("blocked")}</span>
-        <button data-action="delete-message" data-message="${message.id}">${t("deleteMessage")}</button>
+        <button data-action="delete-message" data-message="${escapeHtml(message.id)}">${t("deleteMessage")}</button>
       </div>
     </header>
-    <iframe title="Message sandbox" sandbox="${canRunScripts(message) ? "allow-scripts" : ""}" srcdoc="${escapeHtml(messageDocument(message))}"></iframe>
+    <iframe title="Message sandbox" data-role="message-sandbox" sandbox="${canRunScripts(message) ? "allow-scripts" : ""}" srcdoc="${escapeHtml(messageDocument(message))}"></iframe>
   `;
 }
 
@@ -592,11 +605,11 @@ function accountView(account: TraditionalMailAccount) {
   return `
     <article class="account ${account.status === "connected" ? "connected" : ""}">
       <div>
-        <h3>${account.email}</h3>
-        <p>${account.provider}</p>
+        <h3>${escapeHtml(account.email)}</h3>
+        <p>${escapeHtml(account.provider)}</p>
       </div>
       <span class="${account.status === "connected" ? "mini ok" : "mini warn"}">${account.status === "connected" ? t("connected") : t("auth")}</span>
-      <small>${account.incoming} / ${account.outgoing}</small>
+      <small>${escapeHtml(account.incoming)} / ${escapeHtml(account.outgoing)}</small>
     </article>
   `;
 }
@@ -609,23 +622,23 @@ function domainView(manifest: TrustManifest) {
   return `
     <article class="domain ${trusted ? "trusted" : ""} ${revoked ? "revoked" : ""} ${muted ? "muted" : ""}">
       <div class="domain-head">
-        <div class="domain-icon" title="${manifest.displayName}">${domainIcon(manifest.displayName)}</div>
+        <div class="domain-icon" title="${escapeHtml(manifest.displayName)}">${escapeHtml(domainIcon(manifest.displayName))}</div>
         <div>
-          <h3>${manifest.displayName}</h3>
-          <p>${manifest.domain}</p>
+          <h3>${escapeHtml(manifest.displayName)}</h3>
+          <p>${escapeHtml(manifest.domain)}</p>
         </div>
         <label class="switch" title="${t("trustedToggleTitle")}">
-          <input type="checkbox" data-action="trust" data-domain="${manifest.domain}" ${trusted && !revoked ? "checked" : ""} />
+          <input type="checkbox" data-action="trust" data-domain="${escapeHtml(manifest.domain)}" ${trusted && !revoked ? "checked" : ""} />
           <span></span>
         </label>
       </div>
-      <p class="proof">${manifest.verifiedBy}</p>
+      <p class="proof">${escapeHtml(manifest.verifiedBy)}</p>
       <div class="channels">
           ${manifest.channels.map((channel) => channelView(manifest, channel)).join("")}
       </div>
       <div class="domain-actions">
-        <button type="button" class="domain-remove" data-action="mute-domain" data-domain="${manifest.domain}">${muted ? t("domainMuted") : t("muteDomain")}</button>
-        <button type="button" class="domain-remove" data-action="remove-domain" data-domain="${manifest.domain}">${revoked ? t("domainRemoved") : t("removeDomain")}</button>
+        <button type="button" class="domain-remove" data-action="mute-domain" data-domain="${escapeHtml(manifest.domain)}">${muted ? t("domainMuted") : t("muteDomain")}</button>
+        <button type="button" class="domain-remove" data-action="remove-domain" data-domain="${escapeHtml(manifest.domain)}">${revoked ? t("domainRemoved") : t("removeDomain")}</button>
       </div>
     </article>
   `;
@@ -636,10 +649,10 @@ function channelView(manifest: TrustManifest, channel: Channel) {
   const disabled = StatePolicy.evaluateDomainState(manifest.domain, stateStore.domainSnapshot()) === "revoked";
   return `
     <label class="channel">
-      <input type="checkbox" data-action="subscribe" data-domain="${manifest.domain}" data-channel="${channel.id}" ${subscribed && !disabled ? "checked" : ""} ${disabled ? "disabled" : ""} />
+      <input type="checkbox" data-action="subscribe" data-domain="${escapeHtml(manifest.domain)}" data-channel="${escapeHtml(channel.id)}" ${subscribed && !disabled ? "checked" : ""} ${disabled ? "disabled" : ""} />
       <span>
-        <strong>${channel.label}</strong>
-        <small>${channel.route}</small>
+        <strong>${escapeHtml(channel.label)}</strong>
+        <small>${escapeHtml(channel.route)}</small>
       </span>
     </label>
   `;
@@ -647,7 +660,7 @@ function channelView(manifest: TrustManifest, channel: Channel) {
 
 function messageRow(message: MailMessage, selectedId: string) {
   return `
-    <button class="message ${message.id === selectedId ? "active" : ""}" data-action="select" data-message="${message.id}">
+    <button class="message ${message.id === selectedId ? "active" : ""}" data-action="select" data-message="${escapeHtml(message.id)}">
       <span class="subject">${escapeHtml(message.subject)}</span>
       <span class="meta">${escapeHtml(message.from)} | ${message.source === "traditional" ? t("mail") : t("realtimeShort")} | ${timeAgo(message.receivedAt)}</span>
       <span class="${canRender(message) ? "state ok" : "state danger"}">${canRender(message) ? renderLabel(message) : t("blocked")}</span>
@@ -779,6 +792,12 @@ function bindEvents() {
     handle.addEventListener("pointerdown", (event) => startResize(event, handle.dataset.resizer));
   });
 
+  document.querySelector<HTMLIFrameElement>("[data-role='message-sandbox']")?.addEventListener("pointerdown", (event) => {
+    if (event.isTrusted) {
+      lastSandboxPointerAt = Date.now();
+    }
+  });
+
   const sidebar = document.querySelector<HTMLElement>(".sidebar");
   const shell = document.querySelector<HTMLElement>(".shell");
   sidebar?.addEventListener("mouseenter", () => shell?.classList.add("sidebar-peek"));
@@ -843,6 +862,10 @@ function parseHostActionRequest(value: unknown): HostActionRequest {
 function isSelectedSandboxSource(source: MessageEventSource | null): boolean {
   const frame = document.querySelector<HTMLIFrameElement>(".reader iframe");
   return Boolean(frame?.contentWindow && source === frame.contentWindow);
+}
+
+function hasFreshSandboxUserGesture() {
+  return lastSandboxPointerAt > 0 && Date.now() - lastSandboxPointerAt < 3000;
 }
 
 function isAllowedHostActionRequest(message: MailMessage, request: HostActionRequest): boolean {

@@ -186,6 +186,7 @@ export class ManifestResolver {
   constructor(private readonly fetcher: typeof fetch = fetch) {}
 
   manifestUrl(domain: string): string {
+    assertDomain(domain);
     return `https://${domain}/.well-known/realtime-mail.json`;
   }
 
@@ -610,7 +611,8 @@ export class SandboxRenderer {
       return `<p>Blocked untrusted message from ${escapeHtml(message.domain)}</p>`;
     }
     const script = this.trustPolicy.canRunScript(message) && message.script ? `<script>${message.script}<\/script>` : "";
-    return `<!doctype html><html><head><meta charset="utf-8"><style>${message.css ?? ""}</style></head><body>${message.html}${script}</body></html>`;
+    const csp = sandboxCsp(this.trustPolicy.canRunScript(message));
+    return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><style>${message.css ?? ""}</style></head><body>${message.html}${script}</body></html>`;
   }
 }
 
@@ -789,6 +791,11 @@ function escapeHtml(value: string): string {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
 
+function sandboxCsp(canRunScript: boolean): string {
+  const scriptSrc = canRunScript ? "'unsafe-inline'" : "'none'";
+  return `default-src 'none'; img-src data: blob:; style-src 'unsafe-inline'; script-src ${scriptSrc}; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; media-src data: blob:`;
+}
+
 const domainPattern = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
 const channelIdPattern = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 const publicKeyPattern = /^(ed25519|ecdsa-p256):[A-Za-z0-9_-]+={0,2}$/;
@@ -871,6 +878,12 @@ function expectString(value: unknown, path: string, issues: ValidationIssue[], a
 function expectDomain(value: unknown, path: string, issues: ValidationIssue[]): void {
   if (typeof value !== "string" || !domainPattern.test(value)) {
     issues.push({ path, message: "must be a valid domain" });
+  }
+}
+
+function assertDomain(value: string): void {
+  if (!domainPattern.test(value)) {
+    throw new ValidationError([{ path: "$.domain", message: "must be a valid domain" }]);
   }
 }
 
@@ -1065,7 +1078,10 @@ function matchRoute(pattern: string, route: string, userId?: string): boolean {
     if (part === ":userId") {
       return Boolean(userId) && routeParts[index] === userId;
     }
-    return part.startsWith(":") || part === routeParts[index];
+    if (part.startsWith(":")) {
+      return false;
+    }
+    return part === routeParts[index];
   });
 }
 

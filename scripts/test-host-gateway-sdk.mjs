@@ -2,6 +2,7 @@ import { webcrypto } from "node:crypto";
 import {
   ActionReceiver,
   HostActionBroker,
+  ManifestResolver,
   MessageSigner,
   RealtimeMessageBuilder,
   RouteAuthorizer,
@@ -135,6 +136,15 @@ expectSyncDecision("invalid route", false, routeAuthorizer.authorize({
   channelId: "invoice-events",
   userId: "demo-user"
 }));
+expectSyncDecision("unbound route placeholder", false, new RouteAuthorizer({
+  ...manifest,
+  channels: [{ ...manifest.channels[0], route: "/rt/invoices/:accountId" }]
+}).authorize({
+  route: "/rt/invoices/other-user",
+  channelId: "invoice-events",
+  userId: "demo-user"
+}));
+expectThrow("invalid manifest discovery domain", () => new ManifestResolver().manifestUrl("billing.acme.tld@127.0.0.1"));
 
 const receiver = new ActionReceiver("billing.acme.tld");
 expectSyncDecision("valid gateway action", true, receiver.receive(action));
@@ -176,4 +186,13 @@ function expectSyncDecision(name, expected, decision) {
 function fail(name) {
   console.error(`FAIL ${name}`);
   process.exit(1);
+}
+
+function expectThrow(name, action) {
+  try {
+    action();
+  } catch {
+    return;
+  }
+  fail(name);
 }

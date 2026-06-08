@@ -619,7 +619,7 @@ fn route_matches(pattern: &str, route: &str, user_id: Option<&str>) -> bool {
         if *pattern_part == ":userId" {
             user_id.is_some_and(|id| id == *route_part)
         } else {
-            pattern_part.starts_with(':') || pattern_part == route_part
+            !pattern_part.starts_with(':') && pattern_part == route_part
         }
     })
 }
@@ -755,6 +755,9 @@ mod tests {
         assert!(!broker.authorize(action.clone(), &message, &manifest, true, "2026-06-08T08:16:00.000Z").ok);
         assert!(RouteAuthorizer { manifest: manifest.clone() }.authorize("/rt/invoices/demo-user", Some("invoice-events"), Some("demo-user")).ok);
         assert!(!RouteAuthorizer { manifest: manifest.clone() }.authorize("/rt/admin/demo-user", Some("invoice-events"), Some("demo-user")).ok);
+        let mut unsafe_placeholder_manifest = manifest.clone();
+        unsafe_placeholder_manifest.channels[0].route = "/rt/invoices/:accountId".to_string();
+        assert!(!RouteAuthorizer { manifest: unsafe_placeholder_manifest }.authorize("/rt/invoices/other-user", Some("invoice-events"), Some("demo-user")).ok);
         assert!(ActionReceiver { domain: "billing.acme.tld".to_string() }.receive(action.clone()).ok);
         assert!(!ActionReceiver { domain: "billing.acme.tld".to_string() }.receive(RealtimeMailAction {
             domain: "evil.example".to_string(),

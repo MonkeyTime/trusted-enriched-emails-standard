@@ -1,7 +1,10 @@
+using System.Text.RegularExpressions;
+
 namespace RealtimeMail;
 
 public sealed class ManifestResolver
 {
+    private static readonly Regex DomainPattern = new("^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$", RegexOptions.Compiled);
     private readonly HttpClient httpClient;
 
     public ManifestResolver(HttpClient? httpClient = null)
@@ -11,6 +14,10 @@ public sealed class ManifestResolver
 
     public Uri ManifestUri(string domain)
     {
+        if (!DomainPattern.IsMatch(domain))
+        {
+            throw new RealtimeMailValidationException(new[] { new ValidationIssue("$.domain", "must be a valid domain") });
+        }
         return new Uri($"https://{domain}/.well-known/realtime-mail.json");
     }
 

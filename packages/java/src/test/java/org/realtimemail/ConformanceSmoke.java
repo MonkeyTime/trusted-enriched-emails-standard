@@ -201,6 +201,18 @@ public final class ConformanceSmoke {
     if (new RouteAuthorizer(manifest).authorize("/rt/admin/demo-user", Optional.of("invoice-events"), Optional.of("demo-user")).ok()) {
       throw new IllegalStateException("invalid route accepted");
     }
+    var unsafePlaceholderManifest = new RealtimeMailManifest(
+      manifest.protocol(),
+      manifest.version(),
+      manifest.domain(),
+      manifest.displayName(),
+      manifest.publicKeys(),
+      List.of(new RealtimeMailChannel("invoice-events", "Invoices", "/rt/invoices/:accountId", null, List.of(TrustCapability.RENDER_HTML)))
+    );
+    if (new RouteAuthorizer(unsafePlaceholderManifest).authorize("/rt/invoices/other-user", Optional.of("invoice-events"), Optional.of("demo-user")).ok()) {
+      throw new IllegalStateException("unbound route placeholder accepted");
+    }
+    expectThrows("invalid manifest discovery domain accepted", () -> new ManifestResolver().manifestUri("billing.acme.tld@127.0.0.1"));
     if (!new ActionReceiver("billing.acme.tld").receive(action).ok()) {
       throw new IllegalStateException("valid gateway action rejected");
     }
@@ -278,5 +290,14 @@ public final class ConformanceSmoke {
     var raw = new byte[32];
     System.arraycopy(x509Key, x509Key.length - 32, raw, 0, 32);
     return raw;
+  }
+
+  private static void expectThrows(String message, Runnable action) {
+    try {
+      action.run();
+    } catch (RuntimeException expected) {
+      return;
+    }
+    throw new IllegalStateException(message);
   }
 }

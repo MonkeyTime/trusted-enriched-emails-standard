@@ -1,7 +1,6 @@
 export type Locale = "en" | "fr";
 
-const browserLocale = navigator.language.toLowerCase().startsWith("fr") ? "fr" : "en";
-export const locale: Locale = browserLocale;
+export const locale: Locale = "en";
 
 const dictionaries = {
   en: {

@@ -156,7 +156,7 @@ public sealed class RouteAuthorizer
             {
                 if (userId is null || routeParts[index] != userId) return false;
             }
-            else if (!patternParts[index].StartsWith(':') && patternParts[index] != routeParts[index])
+            else if (patternParts[index].StartsWith(':') || patternParts[index] != routeParts[index])
             {
                 return false;
             }

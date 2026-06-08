@@ -137,7 +137,7 @@ def _route_matches(pattern: str, route: str, user_id: str | None) -> bool:
             if not user_id or route_part != user_id:
                 return False
         elif pattern_part.startswith(":"):
-            continue
+            return False
         elif pattern_part != route_part:
             return False
     return True

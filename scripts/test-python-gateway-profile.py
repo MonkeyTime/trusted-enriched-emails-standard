@@ -81,6 +81,22 @@ def main() -> int:
     assert not broker.authorize(action, message, manifest, True, datetime(2026, 6, 8, 8, 16, tzinfo=timezone.utc))[0]
     assert RouteAuthorizer(manifest).authorize("/rt/invoices/demo-user", "invoice-events", "demo-user")[0]
     assert not RouteAuthorizer(manifest).authorize("/rt/admin/demo-user", "invoice-events", "demo-user")[0]
+    unsafe_placeholder_manifest = RealtimeMailManifest(
+        protocol=manifest.protocol,
+        version=manifest.version,
+        domain=manifest.domain,
+        display_name=manifest.display_name,
+        public_keys=manifest.public_keys,
+        channels=[
+            RealtimeMailChannel(
+                id="invoice-events",
+                label="Invoices",
+                route="/rt/invoices/:accountId",
+                capabilities=[TrustCapability.RENDER_HTML],
+            )
+        ],
+    )
+    assert not RouteAuthorizer(unsafe_placeholder_manifest).authorize("/rt/invoices/other-user", "invoice-events", "demo-user")[0]
     assert ActionReceiver("billing.acme.tld").receive(action)[0]
     cross_domain = {**action, "domain": "evil.example", "url": "https://evil.example/invoices/1"}
     assert not ActionReceiver("billing.acme.tld").receive(cross_domain)[0]

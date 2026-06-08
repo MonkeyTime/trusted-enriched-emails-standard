@@ -70,6 +70,16 @@ func TestGatewayProfileSecurity(t *testing.T) {
 	if _, err := (RouteAuthorizer{Manifest: manifest}).Authorize("/rt/admin/demo-user", "invoice-events", "demo-user"); err == nil {
 		t.Fatal("invalid route accepted")
 	}
+	unsafePlaceholderManifest := manifest
+	unsafePlaceholderManifest.Channels = []RealtimeMailChannel{{
+		ID:           "invoice-events",
+		Label:        "Invoices",
+		Route:        "/rt/invoices/:accountId",
+		Capabilities: []TrustCapability{RenderHTML},
+	}}
+	if _, err := (RouteAuthorizer{Manifest: unsafePlaceholderManifest}).Authorize("/rt/invoices/other-user", "invoice-events", "demo-user"); err == nil {
+		t.Fatal("unbound route placeholder accepted")
+	}
 	if _, err := (ActionReceiver{Domain: "billing.acme.tld"}).Receive(action); err != nil {
 		t.Fatalf("valid gateway action rejected: %v", err)
 	}

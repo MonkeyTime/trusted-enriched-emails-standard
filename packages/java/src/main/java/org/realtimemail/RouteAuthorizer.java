@@ -29,8 +29,8 @@ public final class RouteAuthorizer {
       var routePart = routeParts.get(index);
       if (patternPart.equals(":userId")) {
         if (userId.isEmpty() || !routePart.equals(userId.get())) return false;
-      } else if (!patternPart.startsWith(":") && !patternPart.equals(routePart)) {
-        return false;
+      } else {
+        if (patternPart.startsWith(":") || !patternPart.equals(routePart)) return false;
       }
     }
     return true;
