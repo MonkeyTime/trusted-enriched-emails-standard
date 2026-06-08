@@ -279,13 +279,36 @@ p {
   margin-top: 18px;
 }
 
+.panel-heading {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
 .panel h2,
 .audit h2 {
   color: var(--muted);
   font-size: 13px;
   letter-spacing: 0;
-  margin-bottom: 10px;
   text-transform: uppercase;
+}
+
+.add-domain-button {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 850;
+  min-height: 30px;
+  padding: 0 10px;
+}
+
+.compact-only {
+  display: none;
 }
 
 .domains,
@@ -670,6 +693,7 @@ p {
 
 .sidebar-compact .brand-copy,
 .sidebar-compact .panel h2,
+.sidebar-compact .add-domain-button,
 .sidebar-compact .optional-panel,
 .sidebar-compact .mode-switch,
 .sidebar-compact .language-select,
@@ -690,6 +714,8 @@ p {
 .sidebar-compact .sidebar:focus-within .brand-copy,
 .sidebar-compact .sidebar:hover .panel h2,
 .sidebar-compact .sidebar:focus-within .panel h2,
+.sidebar-compact .sidebar:hover .add-domain-button,
+.sidebar-compact .sidebar:focus-within .add-domain-button,
 .sidebar-compact .sidebar:hover .optional-panel,
 .sidebar-compact .sidebar:focus-within .optional-panel,
 .sidebar-compact .sidebar:hover .mode-switch,
@@ -735,6 +761,8 @@ p {
 .sidebar-compact .sidebar:focus-within .brand-copy,
 .sidebar-compact .sidebar:hover .panel h2,
 .sidebar-compact .sidebar:focus-within .panel h2,
+.sidebar-compact .sidebar:hover .add-domain-button,
+.sidebar-compact .sidebar:focus-within .add-domain-button,
 .sidebar-compact .sidebar:hover .domain-head > div:not(.domain-icon),
 .sidebar-compact .sidebar:focus-within .domain-head > div:not(.domain-icon),
 .sidebar-compact .sidebar:hover .domain-head .switch,
@@ -746,6 +774,15 @@ p {
 
 .sidebar-compact .domain {
   padding: 7px;
+}
+
+.sidebar-compact .compact-only {
+  display: inline-flex;
+}
+
+.sidebar-compact .sidebar:hover .compact-only,
+.sidebar-compact .sidebar:focus-within .compact-only {
+  display: none;
 }
 
 .sidebar-compact .domain-head {
@@ -797,6 +834,7 @@ p {
 
   .sidebar-compact .brand-copy,
   .sidebar-compact .panel h2,
+  .sidebar-compact .add-domain-button,
   .sidebar-compact .optional-panel,
   .sidebar-compact .mode-switch,
   .sidebar-compact .language-select,

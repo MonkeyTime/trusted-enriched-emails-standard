@@ -1,0 +1,16 @@
+{
+  "name": "realtimemail/realtime-mail",
+  "description": "PHP SDK for trusted enriched email over the Realtime Mail draft standard",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": ">=7.4",
+    "ext-json": "*",
+    "ext-sodium": "*"
+  },
+  "autoload": {
+    "files": [
+      "src/RealtimeMail.php"
+    ]
+  }
+}

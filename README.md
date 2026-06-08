@@ -12,6 +12,7 @@ The repository is structured as a standard plus SDKs:
 - [C# SDK](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/packages/csharp)
 - [Python SDK](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/packages/python)
 - [Go SDK](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/packages/go)
+- [PHP SDK](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/packages/php)
 - [Rust SDK](https://github.com/MonkeyTime/realtime-mail-standard/tree/main/packages/rust)
 - [Official documentation](https://monkeytime.github.io/realtime-mail-standard/)
 - [Trusted enriched email demo](https://monkeytime.github.io/realtime-mail-standard/demo.html)
@@ -38,13 +39,14 @@ npm.cmd run build -w @realtimemail/sdk
 npm.cmd run test
 npm.cmd run python:check
 npm.cmd run go:check
+npm.cmd run php:check
 npm.cmd run java:check
 npm.cmd run csharp:conformance
 npm.cmd run rust:check
 npm.cmd run rabbitmq:test
 ```
 
-Java, C#, Python, Go, and Rust packages are scaffolded with their native package metadata.
+Java, C#, Python, Go, PHP, and Rust packages are scaffolded with their native package metadata.
 
 On Windows, `npm.cmd run rust:check` requires the Rust MSVC target plus the Visual Studio C++ build tools and a Windows SDK. If Cargo is installed but the MSVC environment is incomplete, the check reports the missing prerequisite before compiling the Rust SDK.
 
@@ -134,6 +136,7 @@ For the current milestone, the SDKs are the primary reusable output. The web cli
 - [Security model](https://monkeytime.github.io/realtime-mail-standard/security-model.html)
 - [Threat model](https://monkeytime.github.io/realtime-mail-standard/threat-model.html)
 - [Gateway SDK profile](https://monkeytime.github.io/realtime-mail-standard/gateway-sdk-profile.html)
+- [Trust onboarding profile](https://monkeytime.github.io/realtime-mail-standard/trust-onboarding-profile.html)
 - [Host-mediated payment request profile](https://monkeytime.github.io/realtime-mail-standard/payment-request-profile.html)
 - [State policy](https://monkeytime.github.io/realtime-mail-standard/state-policy.html)
 - [SDK compatibility matrix](https://monkeytime.github.io/realtime-mail-standard/sdk-compatibility.html)

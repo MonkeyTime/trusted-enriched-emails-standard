@@ -84,11 +84,11 @@ function landingPage(pages) {
     },
     {
       title: "SDK References",
-      items: ["reference/typescript.md", "reference/python.md", "reference/go.md", "reference/rust.md", "reference/java.md", "reference/csharp.md", "sdk-compatibility.md", "sdk-release-checklist.md"]
+      items: ["reference/typescript.md", "reference/python.md", "reference/go.md", "reference/php.md", "reference/rust.md", "reference/java.md", "reference/csharp.md", "sdk-compatibility.md", "sdk-release-checklist.md"]
     },
     {
       title: "Profiles",
-      items: ["gateway-sdk-profile.md", "payment-request-profile.md", "state-policy.md"]
+      items: ["gateway-sdk-profile.md", "trust-onboarding-profile.md", "payment-request-profile.md", "state-policy.md"]
     }
   ];
   const pageBySource = new Map(pages.map((page) => [page.source, page]));

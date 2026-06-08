@@ -20,6 +20,7 @@ The value proposition is richer mail, not only faster mail: safe interactive inv
 - [TypeScript SDK](reference/typescript.md)
 - [Python SDK](reference/python.md)
 - [Go SDK](reference/go.md)
+- [PHP SDK](reference/php.md)
 - [Rust SDK](reference/rust.md)
 - [Java SDK](reference/java.md)
 - [C# SDK](reference/csharp.md)
@@ -29,6 +30,7 @@ The value proposition is richer mail, not only faster mail: safe interactive inv
 ## Profiles
 
 - [Gateway SDK profile](gateway-sdk-profile.md)
+- [Trust onboarding profile](trust-onboarding-profile.md)
 - [Host-mediated payment request profile](payment-request-profile.md)
 - [State policy](state-policy.md)
 

@@ -23,6 +23,12 @@ The response must be JSON and must declare:
 - `version`: manifest schema version.
 - `domain`: canonical domain.
 - `displayName`: user-facing sender name.
+
+## Trust Onboarding
+
+Clients should support manual trusted-domain entry and the draft `tree://` onboarding URI profile described in `docs/trust-onboarding-profile.md`.
+
+An onboarding URI may prefill a requested domain or channel, but the client must still fetch the `.well-known` manifest, validate it, display capabilities, and require explicit user confirmation before adding trust.
 - `publicKeys`: message verification keys.
 - `channels`: subscribable routes and required capabilities.
 

@@ -76,6 +76,11 @@ type HostActionRequest = {
   payment?: HostMediatedPaymentRequest;
 };
 
+type TrustedDomainRequest = {
+  domain: string;
+  channelId?: string;
+};
+
 type ThemeMode = "day" | "night";
 
 type LayoutState = {
@@ -390,6 +395,77 @@ async function publishGatewayMessage(path: string, eventKey: "gatewayPublishRequ
   render();
 }
 
+async function addTrustedDomainFromUserInput() {
+  const raw = window.prompt(t("addTrustedDomainPrompt"), "tree://subscribe?domain=billing.acme.tld&channel=invoice-events");
+  if (!raw) {
+    return;
+  }
+  const request = parseTrustedDomainRequest(raw);
+  if (!request) {
+    state.eventLog.unshift(t("eventTrustedDomainInvalid", { value: raw }));
+    render();
+    return;
+  }
+  try {
+    const manifest = await loadTrustManifest(request.domain);
+    if (!manifests.some((existing) => existing.domain === manifest.domain)) {
+      manifests.unshift(manifest);
+    }
+    stateStore.trustDomain(manifest.domain);
+    const channels = request.channelId
+      ? manifest.channels.filter((channel) => channel.id === request.channelId)
+      : manifest.channels;
+    if (channels.length === 0) {
+      state.eventLog.unshift(t("eventTrustedDomainInvalid", { value: request.channelId ?? request.domain }));
+      render();
+      return;
+    }
+    for (const channel of channels) {
+      stateStore.subscribe(manifest.domain, channel.id);
+    }
+    state.eventLog.unshift(t("eventTrustedDomainAdded", { domain: manifest.domain, count: channels.length }));
+    render();
+  } catch (error) {
+    state.eventLog.unshift(t("eventTrustedDomainFailed", {
+      domain: request.domain,
+      reason: error instanceof Error ? error.message : t("unknownError")
+    }));
+    render();
+  }
+}
+
+async function loadTrustManifest(domain: string): Promise<TrustManifest> {
+  const endpoint = domain === "billing.acme.tld"
+    ? `${gatewayBaseUrl}/.well-known/realtime-mail.json`
+    : `https://${domain}/.well-known/realtime-mail.json`;
+  try {
+    const response = await fetch(endpoint);
+    if (!response.ok) {
+      throw new Error(`manifest_${response.status}`);
+    }
+    const manifest = ManifestValidator.parse(await response.json());
+    return {
+      domain: manifest.domain,
+      displayName: manifest.displayName,
+      verifiedBy: t("wellKnownProof"),
+      permissions: standardCapabilitiesToTrustLevels(manifest.channels.flatMap((channel) => channel.capabilities)),
+      channels: manifest.channels.map((channel) => ({
+        id: channel.id,
+        label: channel.label,
+        route: channel.route,
+        description: channel.description ?? ""
+      }))
+    };
+  } catch (error) {
+    const local = getManifest(domain);
+    if (local) {
+      state.eventLog.unshift(t("eventTrustedDomainLocalFallback", { domain }));
+      return local;
+    }
+    throw error;
+  }
+}
+
 function mergeGatewayManifest(manifest: RealtimeMailManifest) {
   if (!manifests.some((existing) => existing.domain === manifest.domain)) {
     manifests.unshift({
@@ -440,6 +516,36 @@ function standardCapabilitiesToTrustLevels(capabilities: string[]): TrustLevel[]
 
 function escapeHtml(value: string) {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+}
+
+function parseTrustedDomainRequest(value: string): TrustedDomainRequest | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol === "tree:" || url.protocol === "https:") {
+      const domain = normalizeTrustedDomain(url.searchParams.get("domain") ?? "");
+      const channelId = normalizeChannelId(url.searchParams.get("channel") ?? "");
+      return domain ? { domain, channelId } : undefined;
+    }
+  } catch {
+    // Plain domains are handled below.
+  }
+  const domain = normalizeTrustedDomain(trimmed);
+  return domain ? { domain } : undefined;
+}
+
+function normalizeTrustedDomain(value: string) {
+  const domain = value.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  return /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/.test(domain)
+    ? domain
+    : "";
+}
+
+function normalizeChannelId(value: string) {
+  return /^[a-z0-9][a-z0-9._-]{0,63}$/.test(value) ? value : undefined;
 }
 
 function sandboxCsp(canRunScript: boolean) {
@@ -533,6 +639,7 @@ function render() {
               <i></i>
               <span>${t("nightMode")}</span>
             </label>
+            <button class="icon-button compact-only" type="button" data-action="add-trusted-domain" title="${t("addTrustedDomain")}" aria-label="${t("addTrustedDomain")}">+</button>
             <button class="icon-button" type="button" data-action="toggle-sidebar" title="${t("compactSidebarTitle")}" aria-label="${t("compactSidebarTitle")}">
               ${layoutState.sidebarCompact ? ">" : "<"}
             </button>
@@ -545,7 +652,10 @@ function render() {
             </select>
           </label>
           <section class="panel">
-            <h2>${t("domains")}</h2>
+            <div class="panel-heading">
+              <h2>${t("domains")}</h2>
+              <button class="add-domain-button" type="button" data-action="add-trusted-domain">${t("addTrustedDomain")}</button>
+            </div>
             <div class="domains">
               ${manifests.map((manifest) => domainView(manifest)).join("")}
             </div>
@@ -785,6 +895,12 @@ function bindEvents() {
     button.addEventListener("click", () => {
       state.selectedMessageId = button.dataset.message ?? state.selectedMessageId;
       render();
+    });
+  });
+
+  document.querySelectorAll<HTMLElement>("[data-action='add-trusted-domain']").forEach((button) => {
+    button.addEventListener("click", () => {
+      void addTrustedDomainFromUserInput();
     });
   });
 

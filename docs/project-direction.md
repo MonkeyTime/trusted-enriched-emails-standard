@@ -38,6 +38,8 @@ Trusted enriched email cannot depend on every website changing behavior at once.
 
 The first production target should be a reference client plus SDKs that make a trusted domain integration faster than building an email template and a separate web app.
 
+Trusted-domain onboarding is part of the product, not an implementation detail. A client should support manual domain entry, and websites or traditional emails should be able to offer a `tree://trust?domain=...` link that opens the user's compatible mail client without granting trust automatically.
+
 ## Why Developers Would Integrate
 
 Developers get:

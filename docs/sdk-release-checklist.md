@@ -85,4 +85,4 @@ Before publishing packages:
 - Add license metadata everywhere.
 - Add changelog entries.
 - Tag a draft release.
-- Publish TypeScript first, then use the same version for Python, Go, Rust, Java, and C#.
+- Publish TypeScript first, then use the same version for Python, Go, PHP, Rust, Java, and C#.

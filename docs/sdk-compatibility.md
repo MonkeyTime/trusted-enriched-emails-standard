@@ -2,28 +2,28 @@
 
 This matrix tracks the minimum feature set expected from every official SDK.
 
-| Capability | TypeScript | Python | Go | Rust | Java | C# |
-| --- | --- | --- | --- | --- | --- | --- |
-| Manifest model | Yes | Yes | Yes | Yes | Yes | Yes |
-| Manifest validation | Yes | Yes | Yes | Yes | Yes | Yes |
-| Message model | Yes | Yes | Yes | Yes | Yes | Yes |
-| Message validation | Yes | Yes | Yes | Yes | Yes | Yes |
-| Action model | Yes | Yes | Yes | Yes | Yes | Yes |
-| Action validation | Yes | Yes | Yes | Yes | Yes | Yes |
-| Payment request payload validation | Yes | Yes | Yes | Yes | Yes | Yes |
-| Payment request security policy | Yes | Yes | Yes | Yes | Yes | Yes |
-| Unknown property rejection | Yes | Yes | Yes | Yes | Planned | Yes |
-| Signed `expiresAt` field | Yes | Yes | Yes | Yes | Yes | Yes |
-| Host action broker | Yes | Yes | Yes | Yes | Yes | Yes |
-| Gateway SDK profile | Yes | Yes | Yes | Yes | Yes | Yes |
-| Trusted domain states | Yes | Yes | Yes | Yes | Yes | Yes |
-| Message lifecycle states | Yes | Yes | Yes | Yes | Yes | Yes |
-| State policy evaluation | Yes | Yes | Yes | Yes | Yes | Yes |
-| Trust policy | Yes | Yes | Yes | Yes | Yes | Yes |
-| Signature verification | Ed25519 | Ed25519 | Ed25519 | Ed25519 | Ed25519 | P-256, Ed25519 stub |
-| Traditional mail account model | Yes | Yes | Yes | Planned | Yes | Yes |
-| Gateway client abstraction | SSE | Planned | Planned | Planned | Interface | Interface |
-| Shared conformance fixtures | Yes | Yes | Yes | Yes | Yes | Yes |
+| Capability | TypeScript | Python | Go | PHP | Rust | Java | C# |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Manifest model | Yes | Yes | Yes | Array | Yes | Yes | Yes |
+| Manifest validation | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Message model | Yes | Yes | Yes | Array | Yes | Yes | Yes |
+| Message validation | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Action model | Yes | Yes | Yes | Array | Yes | Yes | Yes |
+| Action validation | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Payment request payload validation | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Payment request security policy | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Unknown property rejection | Yes | Yes | Yes | Yes | Yes | Planned | Yes |
+| Signed `expiresAt` field | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Host action broker | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Gateway SDK profile | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Trusted domain states | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Message lifecycle states | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| State policy evaluation | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Trust policy | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Signature verification | Ed25519 | Ed25519 | Ed25519 | Ed25519 via Sodium | Ed25519 | Ed25519 | P-256, Ed25519 stub |
+| Traditional mail account model | Yes | Yes | Yes | Planned | Planned | Yes | Yes |
+| Gateway client abstraction | SSE | Planned | Planned | Planned | Planned | Interface | Interface |
+| Shared conformance fixtures | Yes | Yes | Yes | Partial | Yes | Yes | Yes |
 
 ## Compatibility Rules
 
