@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Realtime Mail Standard</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f8f7;
+        --card: #ffffff;
+        --text: #17211d;
+        --muted: #5f7068;
+        --border: #d9e0dc;
+        --accent: #155e75;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #111614;
+          --card: #1b231f;
+          --text: #eef5f1;
+          --muted: #a0b2aa;
+          --border: #304039;
+          --accent: #72c5dc;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.55;
+        margin: 0;
+      }
+
+      main {
+        margin: 0 auto;
+        max-width: 1040px;
+        padding: 56px 24px;
+      }
+
+      header {
+        margin-bottom: 36px;
+      }
+
+      h1 {
+        font-size: clamp(34px, 6vw, 58px);
+        line-height: 1;
+        margin: 0 0 16px;
+      }
+
+      h2 {
+        font-size: 18px;
+        margin: 0 0 14px;
+      }
+
+      p {
+        color: var(--muted);
+        font-size: 18px;
+        margin: 0;
+        max-width: 780px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      }
+
+      section {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 20px;
+      }
+
+      a {
+        color: var(--accent);
+        font-weight: 750;
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      ul {
+        display: grid;
+        gap: 8px;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Realtime Mail Standard</h1>
+        <p>Open draft standard and SDKs for trusted realtime interactive mail: signed messages, sandboxed rendering, explicit capabilities, host-mediated actions, and gateway-backed delivery.</p>
+      </header>
+
+      <div class="grid">
+        <section>
+          <h2>Start Here</h2>
+          <ul>
+            <li><a href="project-direction.md">Project direction</a></li>
+            <li><a href="specification.md">Specification</a></li>
+            <li><a href="security-model.md">Security model</a></li>
+            <li><a href="threat-model.md">Threat model</a></li>
+            <li><a href="roadmap.md">Roadmap</a></li>
+            <li><a href="guides/developer-quickstart.md">Developer quickstart</a></li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>SDK References</h2>
+          <ul>
+            <li><a href="reference/typescript.md">TypeScript SDK</a></li>
+            <li><a href="reference/python.md">Python SDK</a></li>
+            <li><a href="reference/go.md">Go SDK</a></li>
+            <li><a href="reference/rust.md">Rust SDK</a></li>
+            <li><a href="reference/java.md">Java SDK</a></li>
+            <li><a href="reference/csharp.md">C# SDK</a></li>
+            <li><a href="sdk-compatibility.md">SDK compatibility matrix</a></li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Profiles</h2>
+          <ul>
+            <li><a href="gateway-sdk-profile.md">Gateway SDK profile</a></li>
+            <li><a href="payment-request-profile.md">Payment request profile</a></li>
+            <li><a href="state-policy.md">State policy</a></li>
+            <li><a href="https://github.com/MonkeyTime/realtime-mail-standard/tree/main/spec/schemas">Normative schemas</a></li>
+          </ul>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>
