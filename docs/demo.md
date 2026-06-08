@@ -71,7 +71,7 @@ This page shows the three demo moments that make the standard tangible: a payabl
       </div>
       <p class="demo-host-result" aria-live="polite">Host action broker is waiting for a user request.</p>
     </article>
-    <article class="demo-reader-view" data-demo-view="game">
+    <article class="demo-reader-view" data-demo-view="game" hidden>
       <div class="demo-reader-head">
         <div>
           <small>rewards.acme.tld</small>
@@ -92,7 +92,7 @@ This page shows the three demo moments that make the standard tangible: a payabl
       </div>
       <p class="demo-host-result" aria-live="polite">Click the moving tokens. The mini-game can animate and request host actions, but it cannot read mailbox data.</p>
     </article>
-    <article class="demo-reader-view" data-demo-view="trust">
+    <article class="demo-reader-view" data-demo-view="trust" hidden>
       <div class="demo-reader-head">
         <div>
           <small>client security panel</small>

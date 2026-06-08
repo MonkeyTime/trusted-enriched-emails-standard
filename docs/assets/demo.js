@@ -8,7 +8,9 @@ for (const button of demoButtons) {
       item.classList.toggle("active", item === button);
     }
     for (const view of demoViews) {
-      view.classList.toggle("active", view.getAttribute("data-demo-view") === selected);
+      const active = view.getAttribute("data-demo-view") === selected;
+      view.classList.toggle("active", active);
+      view.hidden = !active;
     }
     if (selected === "game") {
       game.ensureReady();

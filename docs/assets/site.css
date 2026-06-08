@@ -206,7 +206,7 @@ blockquote {
   border: 1px solid var(--border);
   border-radius: 8px;
   display: grid;
-  grid-template-columns: minmax(170px, 0.75fr) minmax(210px, 1fr) minmax(280px, 1.35fr);
+  grid-template-columns: minmax(150px, 0.62fr) 190px minmax(360px, 1.65fr);
   margin: 28px 0;
   min-height: 520px;
   overflow: hidden;
@@ -287,6 +287,10 @@ blockquote {
 .demo-list {
   background: color-mix(in srgb, var(--card) 62%, var(--bg));
   border-right: 1px solid var(--border);
+  display: grid;
+  gap: 10px;
+  grid-auto-rows: minmax(112px, auto);
+  align-content: start;
   padding: 16px;
 }
 
@@ -297,10 +301,16 @@ blockquote {
   color: var(--text);
   display: grid;
   gap: 4px;
-  margin-bottom: 10px;
+  min-height: 112px;
   padding: 14px;
   text-align: left;
   width: 100%;
+}
+
+.demo-message strong,
+.demo-message span,
+.demo-message em {
+  min-width: 0;
 }
 
 .demo-message:hover,
@@ -334,6 +344,10 @@ blockquote {
 }
 
 .demo-reader-view {
+  display: none;
+}
+
+.demo-reader-view[hidden] {
   display: none;
 }
 
