@@ -1,4 +1,4 @@
-# Realtime Mail Standard
+# Trusted Enriched Mail Standard
 
 Realtime Mail is an open proposal for trusted enriched email: signed, sandboxed, interactive messages delivered through traditional mail or realtime channels.
 
